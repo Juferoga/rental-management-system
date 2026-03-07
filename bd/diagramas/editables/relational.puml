@@ -1,0 +1,199 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 5
+skinparam class {
+    BackgroundColor White
+    ArrowColor #2c3e50
+    BorderColor #34495e
+}
+
+' ================= TABLAS Y TIPOS DE DATOS =================
+
+entity "USUARIO" as USUARIO {
+  * Id : INT <<PK>>
+  --
+  Nombre : VARCHAR(100)
+  Apellido : VARCHAR(100)
+  Correo : VARCHAR(150)
+  Telefono : VARCHAR(20)
+  Rol : VARCHAR(50)
+  Estado : VARCHAR(20)
+}
+note right of USUARIO : Administradores o dueños\nque gestionan las propiedades.
+
+entity "CASA" as CASA {
+  * Id : INT <<PK>>
+  --
+  Usuario_Id : INT <<FK>>
+  Nombre : VARCHAR(100)
+  Direccion : VARCHAR(200)
+  Barrio : VARCHAR(100)
+  Ciudad : VARCHAR(100)
+  Estado : VARCHAR(20)
+}
+note right of CASA : Propiedad inmueble principal\nque contiene zonas habitacionales.
+
+entity "ZONA_HABITACIONAL" as ZONA_HABITACIONAL {
+  * Id : INT <<PK>>
+  --
+  Casa_Id : INT <<FK>>
+  Nombre : VARCHAR(100)
+  Tipo : VARCHAR(50)
+  Area_m2 : DECIMAL(8,2)
+  Valor_Arriendo : DECIMAL(12,2)
+  Estado : VARCHAR(20)
+}
+note left of ZONA_HABITACIONAL : Habitaciones, apartaestudios o\nlocales dentro de la casa.
+
+entity "INQUILINO" as INQUILINO {
+  * Id : INT <<PK>>
+  --
+  Nombre : VARCHAR(100)
+  Apellido : VARCHAR(100)
+  Tipo_Identificacion : VARCHAR(20)
+  Identificacion : VARCHAR(50)
+  Telefono : VARCHAR(20)
+  Correo : VARCHAR(150)
+}
+
+entity "CONTRATO" as CONTRATO {
+  * Id : INT <<PK>>
+  --
+  Inquilino_Id : INT <<FK>>
+  Zona_Habitacional_Id : INT <<FK>>
+  Fecha_Firma : DATE
+  Fecha_Inicio : DATE
+  Fecha_Fin : DATE
+  Valor_Pactado : DECIMAL(12,2)
+  Estado : VARCHAR(20)
+  Creado_En : TIMESTAMP
+}
+note right of CONTRATO : Vínculo legal entre el inquilino\ny la zona habitacional.
+
+entity "DEPOSITO" as DEPOSITO {
+  * Id : INT <<PK>>
+  --
+  Contrato_Id : INT <<FK>> <<UQ>>
+  Monto_Inicial : DECIMAL(12,2)
+  Monto_Disponible : DECIMAL(12,2)
+  Estado : VARCHAR(20)
+}
+
+entity "MOVIMIENTO_DEPOSITO" as MOVIMIENTO_DEPOSITO {
+  * Id : INT <<PK>>
+  --
+  Deposito_Id : INT <<FK>>
+  Fecha : DATE
+  Monto : DECIMAL(12,2)
+  Tipo : VARCHAR(20)
+  Motivo : TEXT
+}
+note bottom of MOVIMIENTO_DEPOSITO : Descuentos por daños o\nreintegros al finalizar el contrato.
+
+entity "PAGO_RENTA" as PAGO_RENTA {
+  * Id : INT <<PK>>
+  --
+  Contrato_Id : INT <<FK>>
+  Anio : INT
+  Mes : INT
+  Monto_Esperado : DECIMAL(12,2)
+  Monto_Pagado : DECIMAL(12,2)
+  Fecha_Pago : DATE
+  Metodo_Pago : VARCHAR(50)
+  Estado : VARCHAR(20)
+}
+
+entity "PRESTAMO" as PRESTAMO {
+  * Id : INT <<PK>>
+  --
+  Contrato_Id : INT <<FK>>
+  Fecha : DATE
+  Monto_Total : DECIMAL(12,2)
+  Saldo_Pendiente : DECIMAL(12,2)
+  Motivo : VARCHAR(255)
+  Estado : VARCHAR(20)
+}
+
+entity "PAGO_PRESTAMO" as PAGO_PRESTAMO {
+  * Id : INT <<PK>>
+  --
+  Prestamo_Id : INT <<FK>>
+  Fecha : DATE
+  Monto : DECIMAL(12,2)
+  Nota : VARCHAR(255)
+}
+
+entity "SERVICIO_CATALOGO" as SERVICIO_CATALOGO {
+  * Id : INT <<PK>>
+  --
+  Nombre : VARCHAR(100)
+  Tipo : VARCHAR(50)
+  Proveedor : VARCHAR(100)
+}
+note top of SERVICIO_CATALOGO : Agua, Luz, Gas, Internet, etc.
+
+entity "CASA_SERVICIO" as CASA_SERVICIO {
+  * Casa_Id : INT <<PK>> <<FK>>
+  * Servicio_Id : INT <<PK>> <<FK>>
+}
+note bottom of CASA_SERVICIO : Tabla puente para los servicios\ninstalados en cada casa.
+
+entity "FACTURA_SERVICIO" as FACTURA_SERVICIO {
+  * Id : INT <<PK>>
+  --
+  Casa_Id : INT <<FK>>
+  Servicio_Id : INT <<FK>>
+  Numero_Factura : VARCHAR(50)
+  Anio : INT
+  Mes : INT
+  Fecha_Vencimiento : DATE
+  Valor_Total : DECIMAL(12,2)
+  Estado : VARCHAR(20)
+}
+
+entity "CARGO_SERVICIO" as CARGO_SERVICIO {
+  * Id : INT <<PK>>
+  --
+  Factura_Id : INT <<FK>>
+  Contrato_Id : INT <<FK>>
+  Monto_Asignado : DECIMAL(12,2)
+  Estado : VARCHAR(20)
+}
+note right of CARGO_SERVICIO : La porción de la factura global\nque debe pagar un inquilino.
+
+entity "MANTENIMIENTO" as MANTENIMIENTO {
+  * Id : INT <<PK>>
+  --
+  Zona_Habitacional_Id : INT <<FK>>
+  Usuario_Id : INT <<FK>>
+  Fecha : DATE
+  Descripcion : TEXT
+  Costo : DECIMAL(12,2)
+  Estado : VARCHAR(20)
+}
+
+' ================= RELACIONES =================
+
+USUARIO ||--o{ CASA 
+CASA ||--o{ ZONA_HABITACIONAL 
+INQUILINO ||--o{ CONTRATO 
+ZONA_HABITACIONAL ||--o{ CONTRATO 
+CONTRATO ||--|| DEPOSITO 
+DEPOSITO ||--o{ MOVIMIENTO_DEPOSITO 
+CONTRATO ||--o{ PAGO_RENTA 
+CONTRATO ||--o{ PRESTAMO 
+PRESTAMO ||--o{ PAGO_PRESTAMO 
+
+CASA ||--o{ CASA_SERVICIO
+SERVICIO_CATALOGO ||--o{ CASA_SERVICIO
+CASA ||--o{ FACTURA_SERVICIO 
+SERVICIO_CATALOGO ||--o{ FACTURA_SERVICIO 
+
+FACTURA_SERVICIO ||--o{ CARGO_SERVICIO 
+CONTRATO ||--o{ CARGO_SERVICIO 
+
+ZONA_HABITACIONAL ||--o{ MANTENIMIENTO 
+USUARIO ||--o{ MANTENIMIENTO 
+
+@enduml

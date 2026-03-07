@@ -1,0 +1,213 @@
+@startchen
+left to right direction
+
+' ================= ENTIDADES =================
+
+entity USUARIO {
+  Id <<key>>
+  Nombre
+  Apellido
+  Correo
+  Telefono
+  Rol
+  Estado
+}
+
+entity CASA {
+  Id <<key>>
+  Nombre
+  Direccion
+  Barrio
+  Ciudad
+  Estado
+}
+
+entity ZONA_HABITACIONAL {
+  Id <<key>>
+  Nombre
+  Tipo
+  Area_m2
+  Valor_Arriendo
+  Estado
+}
+
+entity INQUILINO {
+  Id <<key>>
+  Nombre
+  Apellido
+  Tipo_Identificacion
+  Identificacion
+  Telefono
+  Correo
+}
+
+entity CONTRATO {
+  Id <<key>>
+  Fecha_Firma
+  Fecha_Inicio
+  Fecha_Fin
+  Valor_Pactado
+  Estado
+  Creado_En
+}
+
+entity DEPOSITO {
+  Id <<key>>
+  Monto_Inicial
+  Monto_Disponible
+  Estado
+}
+
+entity MOVIMIENTO_DEPOSITO {
+  Id <<key>>
+  Fecha
+  Monto
+  Tipo
+  Motivo
+}
+
+entity PAGO_RENTA {
+  Id <<key>>
+  Anio
+  Mes
+  Monto_Esperado
+  Monto_Pagado
+  Fecha_Pago
+  Metodo_Pago
+  Estado
+}
+
+entity PRESTAMO {
+  Id <<key>>
+  Fecha
+  Monto_Total
+  Saldo_Pendiente
+  Motivo
+  Estado
+}
+
+entity PAGO_PRESTAMO {
+  Id <<key>>
+  Fecha
+  Monto
+  Nota
+}
+
+entity SERVICIO_CATALOGO {
+  Id <<key>>
+  Nombre
+  Tipo
+  Proveedor
+}
+
+entity FACTURA_SERVICIO {
+  Id <<key>>
+  Numero_Factura
+  Anio
+  Mes
+  Fecha_Vencimiento
+  Valor_Total
+  Estado
+}
+
+entity CARGO_SERVICIO {
+  Id <<key>>
+  Monto_Asignado
+  Estado
+}
+
+entity MANTENIMIENTO {
+  Id <<key>>
+  Fecha
+  Descripcion
+  Costo
+  Estado
+}
+
+' ================= RELACIONES =================
+
+relationship Administra {
+}
+USUARIO -1- Administra
+Administra -N- CASA
+
+relationship Se_Compone {
+}
+CASA -1- Se_Compone
+Se_Compone -N- ZONA_HABITACIONAL
+
+relationship Firma {
+}
+INQUILINO -1- Firma
+Firma -N- CONTRATO
+
+relationship Arrienda {
+}
+ZONA_HABITACIONAL -1- Arrienda
+Arrienda -N- CONTRATO
+
+relationship Respalda {
+}
+CONTRATO -1- Respalda
+Respalda -1- DEPOSITO
+
+relationship Registra_Movimiento {
+}
+DEPOSITO -1- Registra_Movimiento
+Registra_Movimiento -N- MOVIMIENTO_DEPOSITO
+
+relationship Genera_Renta {
+}
+CONTRATO -1- Genera_Renta
+Genera_Renta -N- PAGO_RENTA
+
+relationship Adquiere_Deuda {
+}
+CONTRATO -1- Adquiere_Deuda
+Adquiere_Deuda -N- PRESTAMO
+
+relationship Abona_A {
+}
+PRESTAMO -1- Abona_A
+Abona_A -N- PAGO_PRESTAMO
+
+' === SERVICIOS COMPARTIDOS ===
+
+relationship Tiene_Instalado {
+}
+CASA -N- Tiene_Instalado
+Tiene_Instalado -M- SERVICIO_CATALOGO
+
+relationship Corresponde_A {
+}
+FACTURA_SERVICIO -N- Corresponde_A
+Corresponde_A -1- SERVICIO_CATALOGO
+
+relationship Llega_A {
+}
+CASA -1- Llega_A
+Llega_A -N- FACTURA_SERVICIO
+
+relationship Desglosa_Cargo {
+}
+FACTURA_SERVICIO -1- Desglosa_Cargo
+Desglosa_Cargo -N- CARGO_SERVICIO
+
+relationship Asigna_Cargo {
+}
+CONTRATO -1- Asigna_Cargo
+Asigna_Cargo -N- CARGO_SERVICIO
+
+' =============================================
+
+relationship Requiere_Arreglo {
+}
+ZONA_HABITACIONAL -1- Requiere_Arreglo
+Requiere_Arreglo -N- MANTENIMIENTO
+
+relationship Supervisa {
+}
+USUARIO -1- Supervisa
+Supervisa -N- MANTENIMIENTO
+
+@endchen
