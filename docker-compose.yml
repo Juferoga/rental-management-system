@@ -1,14 +1,13 @@
 services:
-
   db:
     image: postgres:16-alpine
     container_name: rental_db
     restart: unless-stopped
     shm_size: 64mb
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: example
-      POSTGRES_DB: rental_management
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
@@ -19,16 +18,11 @@ services:
     networks:
       - rental_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d rental_management"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
 
   adminer:
     image: adminer:latest
@@ -43,40 +37,47 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 128M
 
-  # -------------------------------------------------------------------------
-  # FUTURO: Backend Quarkus
-  # Descomenta y ajusta cuando tengas el proyecto listo.
-  # -------------------------------------------------------------------------
-  # backend:
-  #   image: quarkus/rental-backend:latest   # o usa 'build: ./backend'
-  #   container_name: rental_backend
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8081:8080"
-  #   environment:
-  #     QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://db:5432/rental_management
-  #     QUARKUS_DATASOURCE_USERNAME: postgres
-  #     QUARKUS_DATASOURCE_PASSWORD: example
-  #     QUARKUS_HTTP_PORT: 8080
-  #   networks:
-  #     - rental_net
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: "1.0"
-  #         memory: 512M
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rental_backend
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://db:5432/${DB_NAME}?stringtype=unspecified
+      QUARKUS_DATASOURCE_USERNAME: ${DB_USER}
+      QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - rental_net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  openclaw:
+    build:
+      context: ./openclaw_sandbox
+    container_name: rental_openclaw
+    restart: unless-stopped
+    ports:
+      - "18789:18789"
+    environment:
+      OPENCLAW_HOME: /app/data
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    volumes:
+      - openclaw_data:/app/data
+      - ./instrucciones_agente:/app/instrucciones:ro
+    networks:
+      - rental_net
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
+    driver: local
+  openclaw_data:
     driver: local
 
 networks:
