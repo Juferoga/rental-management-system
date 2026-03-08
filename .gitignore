@@ -1,1 +1,16 @@
 .env
+
+# OpenClaw runtime data (credenciales, sesiones, tokens, estado interno)
+openclaw/data/.openclaw/credentials/
+openclaw/data/.openclaw/identity/
+openclaw/data/.openclaw/devices/
+openclaw/data/.openclaw/agents/
+openclaw/data/.openclaw/logs/
+openclaw/data/.openclaw/memory/
+openclaw/data/.openclaw/telegram/
+openclaw/data/.openclaw/cron/
+openclaw/data/.openclaw/canvas/
+openclaw/data/.openclaw/update-check.json
+openclaw/data/.openclaw/openclaw.json.bak*
+# El workspace lo gestionamos desde openclaw/workspace/
+openclaw/data/.openclaw/workspace/

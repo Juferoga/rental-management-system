@@ -70,6 +70,7 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     volumes:
       - ./openclaw/data:/app/data
+      - ./openclaw/workspace:/app/data/.openclaw/workspace
       - ./instrucciones_agente:/app/instrucciones:ro
     networks:
       - rental_net
@@ -78,7 +79,6 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
 
 networks:
   rental_net:

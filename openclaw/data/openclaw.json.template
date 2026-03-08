@@ -21,7 +21,7 @@
         }
     },
     "tools": {
-        "profile": "messaging"
+        "profile": "full"
     },
     "messages": {
         "ackReactionScope": "group-mentions"
