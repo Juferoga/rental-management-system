@@ -1,0 +1,28 @@
+# ── Estado interno de OpenClaw (generado en runtime) ──────────────────────────
+
+# Config principal — contiene tokens del gateway y credenciales de auth
+.openclaw/openclaw.json
+.openclaw/openclaw.json.bak*
+.openclaw/openclaw.json.bak.manual
+
+# Credenciales y tokens sensibles
+.openclaw/credentials/
+.openclaw/identity/
+.openclaw/devices/
+
+# Auth del agente (GitHub Copilot token)
+.openclaw/agents/
+
+# Runtime — no tiene valor en git
+.openclaw/memory/
+.openclaw/logs/
+.openclaw/cron/
+.openclaw/update-check.json
+.openclaw/delivery-queue/
+.openclaw/canvas/
+.openclaw/telegram/
+
+# Workspace — archivos de runtime del agente
+.openclaw/workspace/.git/
+.openclaw/workspace/.openclaw/
+.openclaw/workspace/HEARTBEAT.md

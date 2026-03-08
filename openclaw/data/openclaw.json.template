@@ -1,0 +1,62 @@
+{
+    "_instrucciones": [
+        "Copia este archivo a openclaw.json y reemplaza los valores marcados con <REEMPLAZAR>.",
+        "El TELEGRAM_BOT_TOKEN se pasa por variable de entorno (.env), NO va aquí.",
+        "El gateway.token se genera automáticamente si no se especifica.",
+        "Para configurar Copilot: docker exec rental_openclaw node /app/openclaw.mjs configure"
+    ],
+    "agents": {
+        "defaults": {
+            "model": {
+                "primary": "github-copilot/gpt-4.1"
+            },
+            "workspace": "/app/data/.openclaw/workspace",
+            "compaction": {
+                "mode": "safeguard"
+            },
+            "maxConcurrent": 4,
+            "subagents": {
+                "maxConcurrent": 8
+            }
+        }
+    },
+    "tools": {
+        "profile": "messaging"
+    },
+    "messages": {
+        "ackReactionScope": "group-mentions"
+    },
+    "commands": {
+        "native": "auto",
+        "nativeSkills": "auto",
+        "restart": true,
+        "ownerDisplay": "raw"
+    },
+    "session": {
+        "dmScope": "per-channel-peer"
+    },
+    "channels": {
+        "telegram": {
+            "enabled": true,
+            "dmPolicy": "pairing",
+            "groupPolicy": "open",
+            "streaming": "partial",
+            "groups": {
+                "*": {
+                    "requireMention": true,
+                    "groupPolicy": "open",
+                    "systemPrompt": "Eres Renta 🏠, asistente del sistema de arriendos. Responde en español y de forma concisa cuando estés en grupos. Usa el API del backend (http://backend:8080/api/v1) para datos reales."
+                }
+            }
+        }
+    },
+    "gateway": {
+        "port": 18789,
+        "mode": "local",
+        "bind": "loopback",
+        "tailscale": {
+            "mode": "off",
+            "resetOnExit": false
+        }
+    }
+}
