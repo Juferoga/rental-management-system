@@ -157,3 +157,4 @@ curl -s -X POST http://backend:8080/api/v1/pagos-renta \
 - Las fechas van en formato `YYYY-MM-DD`
 - El backend responde en JSON con Content-Type application/json
 - Errores 409 = conflicto de datos únicos; 404 = no encontrado; 400 = datos inválidos
+- **Lee `BD_SCHEMA.md`** para conocer los valores exactos de cada campo tipo ENUM antes de hacer un POST/PUT. Usar un valor fuera del ENUM causa error 400.
