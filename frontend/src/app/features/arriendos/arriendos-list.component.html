@@ -1,0 +1,51 @@
+<section>
+  <h2>Arriendos</h2>
+  <p-table
+    #dt
+    [value]="rents()"
+    [tableStyle]="{ 'min-width': '100%' }"
+    [globalFilterFields]="['zoneName', 'tenantName', 'status']"
+    [paginator]="true"
+    [rows]="10"
+  >
+    <ng-template pTemplate="caption">
+      <div class="table-toolbar">
+        <p-iconField iconPosition="left">
+          <p-inputIcon class="pi pi-search"></p-inputIcon>
+          <input
+            pInputText
+            type="text"
+            placeholder="Search keyword"
+            (input)="dt.filterGlobal(($any($event.target)).value, 'contains')"
+          />
+        </p-iconField>
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="header">
+      <tr>
+        <th pSortableColumn="zoneName">Zona <p-sortIcon field="zoneName"></p-sortIcon></th>
+        <th pSortableColumn="tenantName">Inquilino <p-sortIcon field="tenantName"></p-sortIcon></th>
+        <th pSortableColumn="monto">Monto <p-sortIcon field="monto"></p-sortIcon></th>
+        <th pSortableColumn="status">Estado <p-sortIcon field="status"></p-sortIcon></th>
+        <th pSortableColumn="date">Fecha <p-sortIcon field="date"></p-sortIcon></th>
+        <th>Acciones</th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-row>
+      <tr>
+        <td>{{ row.zoneName }}</td>
+        <td>{{ row.tenantName }}</td>
+        <td>{{ row.amount | number: '1.0-0' }}</td>
+        <td>
+          <p-tag [value]="row.status" [severity]="getSeverity(row.status)"></p-tag>
+        </td>
+        <td>{{ row.date | date: 'yyyy-MM-dd' }}</td>
+        <td>
+          <p-button icon="pi pi-eye" [rounded]="true" [text]="true" [routerLink]="['/arriendos', row.id]"></p-button>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</section>

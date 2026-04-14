@@ -1,0 +1,94 @@
+<div class="split-view">
+  <section class="panel-left">
+    <h3>Alertas</h3>
+
+    <div class="alerts-block">
+      <h4>Deudas</h4>
+      @if (alerts()?.debts?.length) {
+        @for (debt of alerts()!.debts; track debt.id) {
+          <article
+            class="alert-item alert-item--clickable"
+            tabindex="0"
+            role="link"
+            (click)="onAlertClick(debt)"
+            (keydown)="onAlertKeydown($event, debt)"
+          >
+            <strong>{{ debt.description }}</strong>
+            <span>{{ debt.type }} · {{ debt.amount | number:'1.0-0' }}</span>
+            <small>Vence: {{ debt.dueDate || 'Sin fecha' }}</small>
+          </article>
+        }
+      } @else {
+        <p class="empty-state">
+          <i class="pi pi-fw pi-exclamation-circle empty-state__icon" aria-hidden="true"></i>
+          No hay alertas de deudas.
+        </p>
+      }
+    </div>
+
+    <div class="alerts-block">
+      <h4>Arriendos</h4>
+      @if (alerts()?.rents?.length) {
+        @for (rent of alerts()!.rents; track rent.zoneId + rent.tenantName) {
+          <article
+            class="alert-item alert-item--clickable"
+            tabindex="0"
+            role="link"
+            (click)="onAlertClick(rent)"
+            (keydown)="onAlertKeydown($event, rent)"
+          >
+            <strong>{{ rent.tenantName }}</strong>
+            <span>{{ rent.value | number:'1.0-0' }}</span>
+            <small>Corte: {{ rent.cutoffDate || 'Sin fecha' }}</small>
+          </article>
+        }
+      } @else {
+        <p class="empty-state">
+          <i class="pi pi-fw pi-exclamation-circle empty-state__icon" aria-hidden="true"></i>
+          No hay alertas de arriendos.
+        </p>
+      }
+    </div>
+  </section>
+
+  <section class="panel-right">
+    <h3>Resumen financiero</h3>
+
+    <div class="dashboard-charts">
+      <article class="chart-card">
+        <h4>Ganancias</h4>
+        <p class="chart-caption">Recolectado vs Pendiente</p>
+        <div class="chart-wrapper">
+          <p-chart type="bar" [data]="earningsChartData()" [options]="barOptions"></p-chart>
+        </div>
+      </article>
+
+      <article class="chart-card">
+        <h4>Deudas</h4>
+        <p class="chart-caption">Pagado vs No Pagado</p>
+        <div class="chart-wrapper">
+          <p-chart type="pie" [data]="debtsChartData()" [options]="pieOptions"></p-chart>
+        </div>
+      </article>
+
+      <article class="chart-card services-card">
+        <h4>Servicios</h4>
+        <p class="chart-caption">Resumen mensual</p>
+        <div class="services-metrics">
+          <div>
+            <small>Total</small>
+            <strong>{{ servicesSummary().total | number:'1.0-0' }}</strong>
+          </div>
+          <div>
+            <small>Pagado</small>
+            <strong>{{ servicesSummary().paid | number:'1.0-0' }}</strong>
+          </div>
+          <div>
+            <small>Pendiente</small>
+            <strong>{{ servicesSummary().pending | number:'1.0-0' }}</strong>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>

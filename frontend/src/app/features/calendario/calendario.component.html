@@ -1,0 +1,56 @@
+<section class="calendar-page">
+  <header class="calendar-toolbar">
+    <button type="button" pButton icon="pi pi-angle-left" class="p-button-outlined" (click)="prevMonth()"></button>
+    <h2 class="calendar-month-title">{{ monthLabel() }}</h2>
+    <button type="button" pButton icon="pi pi-angle-right" class="p-button-outlined" (click)="nextMonth()"></button>
+  </header>
+
+  @if (error()) {
+    <p class="empty-state">No se pudo cargar el calendario. Mostrando grilla vacía.</p>
+  }
+
+  @if (loading()) {
+    <p class="empty-state">Cargando calendario...</p>
+  }
+
+  <div class="calendar-grid">
+    <div class="calendar-weekday">Lun</div>
+    <div class="calendar-weekday">Mar</div>
+    <div class="calendar-weekday">Mié</div>
+    <div class="calendar-weekday">Jue</div>
+    <div class="calendar-weekday">Vie</div>
+    <div class="calendar-weekday">Sáb</div>
+    <div class="calendar-weekday">Dom</div>
+
+    @for (week of weeks(); track $index) {
+      @for (day of week; track day.date.toISOString()) {
+        <article class="calendar-day" [class.calendar-day--muted]="!day.inCurrentMonth">
+          <header class="calendar-day-header">{{ day.dayNumber }}</header>
+
+          <div class="calendar-badges">
+            @if (day.counts.rent > 0) {
+              <span class="day-badge day-badge--rent">
+                <i class="pi pi-home"></i>
+                A {{ day.counts.rent }}
+              </span>
+            }
+
+            @if (day.counts.service > 0) {
+              <span class="day-badge day-badge--service">
+                <i class="pi pi-bolt"></i>
+                S {{ day.counts.service }}
+              </span>
+            }
+
+            @if (day.counts.debt > 0) {
+              <span class="day-badge day-badge--debt">
+                <i class="pi pi-wallet"></i>
+                D {{ day.counts.debt }}
+              </span>
+            }
+          </div>
+        </article>
+      }
+    }
+  </div>
+</section>

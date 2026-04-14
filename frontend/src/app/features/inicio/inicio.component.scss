@@ -1,0 +1,31 @@
+.alert-item--clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.alert-item--clickable:hover,
+.alert-item--clickable:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: var(--app-shadow-sm);
+  outline: none;
+}
+
+.services-card .services-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.services-card .services-metrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--app-border-color, #e5e7eb);
+  border-radius: 0.5rem;
+  background: var(--app-surface-100, #f8fafc);
+}
+
+.services-card small {
+  color: var(--app-text-muted, #6b7280);
+}
