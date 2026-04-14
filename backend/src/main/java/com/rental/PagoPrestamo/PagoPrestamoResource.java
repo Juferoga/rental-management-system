@@ -8,6 +8,7 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.util.List;
+import java.util.Optional;
 
 @Path("/api/v1/pagos-prestamo")
 @Produces(MediaType.APPLICATION_JSON)
@@ -20,6 +21,19 @@ public class PagoPrestamoResource {
     @APIResponse(responseCode = "200", description = "Lista recuperada")
     public List<PagoPrestamo> listar() {
         return PagoPrestamo.listAll();
+    }
+
+    @GET
+    @Path("/{id}")
+    @Operation(summary = "Obtener por ID", description = "Obtiene un registro de PagoPrestamo por su ID.")
+    @APIResponse(responseCode = "200", description = "Registro encontrado")
+    @APIResponse(responseCode = "404", description = "No encontrado")
+    public Response obtenerPorId(@PathParam("id") Integer id) {
+        Optional<PagoPrestamo> pagoPrestamo = PagoPrestamo.findByIdOptional(id);
+        return pagoPrestamo
+                .map(Response::ok)
+                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND))
+                .build();
     }
 
     @POST

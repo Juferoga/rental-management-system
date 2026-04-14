@@ -8,6 +8,7 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import java.util.List;
+import java.util.Optional;
 
 @Path("/api/v1/prestamos")
 @Produces(MediaType.APPLICATION_JSON)
@@ -20,6 +21,19 @@ public class PrestamoResource {
     @APIResponse(responseCode = "200", description = "Lista recuperada")
     public List<Prestamo> listar() {
         return Prestamo.listAll();
+    }
+
+    @GET
+    @Path("/{id}")
+    @Operation(summary = "Obtener por ID", description = "Obtiene un registro de Prestamo por su ID.")
+    @APIResponse(responseCode = "200", description = "Registro encontrado")
+    @APIResponse(responseCode = "404", description = "No encontrado")
+    public Response obtenerPorId(@PathParam("id") Integer id) {
+        Optional<Prestamo> prestamo = Prestamo.findByIdOptional(id);
+        return prestamo
+                .map(Response::ok)
+                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND))
+                .build();
     }
 
     @POST

@@ -27,6 +27,11 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-h2</artifactId><version>3.32.2</version>
+      <scope>test</scope>
+    </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -69,10 +74,20 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-h2</artifactId><version>3.32.2</version>
+      <scope>test</scope>
+    </dependency>
     </dependencies>
 
     <build>

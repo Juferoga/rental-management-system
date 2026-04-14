@@ -22,6 +22,17 @@ public class PagoRentaResource {
         return PagoRenta.listAll();
     }
 
+    @GET
+    @Path("/{id}")
+    @Operation(summary = "Obtener por ID", description = "Obtiene un registro de PagoRenta por ID.")
+    @APIResponse(responseCode = "200", description = "Registro encontrado")
+    @APIResponse(responseCode = "404", description = "No encontrado")
+    public Response obtenerPorId(@PathParam("id") Integer id) {
+        return PagoRenta.findByIdOptional(id)
+                .map(entidad -> Response.ok(entidad).build())
+                .orElse(Response.status(Response.Status.NOT_FOUND).build());
+    }
+
     @POST
     @Transactional
     @Operation(summary = "Crear nuevo", description = "Crea un nuevo registro de PagoRenta.")

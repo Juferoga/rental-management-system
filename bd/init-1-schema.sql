@@ -97,6 +97,20 @@ CREATE TYPE prestamo_estado AS ENUM (
     'vencido'      -- No pagado fuera de plazo
 );
 
+-- Estado de una tarjeta de crédito del propietario
+CREATE TYPE credit_card_estado AS ENUM (
+    'activa',
+    'suspendida',
+    'cancelada'
+);
+
+-- Estado de una deuda del propietario
+CREATE TYPE owner_debt_estado AS ENUM (
+    'pendiente',
+    'pagada',
+    'vencida'
+);
+
 -- Tipos de servicio público / domiciliario
 CREATE TYPE servicio_tipo AS ENUM (
     'agua',
@@ -501,7 +515,81 @@ CREATE INDEX idx_pago_prestamo_id ON pago_prestamo (prestamo_id);
 
 
 -- ---------------------------------------------------------------------------
--- 3.11 SERVICIO_CATALOGO
+-- 3.11 TARJETA DE CRÉDITO
+-- Tarjetas de crédito asociadas al propietario para seguimiento de deudas.
+-- ---------------------------------------------------------------------------
+CREATE TABLE credit_card (
+    id               INTEGER            GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    usuario_id       INTEGER            NOT NULL,
+    alias            VARCHAR(100)       NOT NULL,
+    entidad          VARCHAR(100),
+    ultimos_digitos  VARCHAR(4)         NOT NULL,
+    cupo_total       NUMERIC(12,2)      NOT NULL CHECK (cupo_total >= 0),
+    estado           credit_card_estado NOT NULL DEFAULT 'activa',
+    created_at       TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_credit_card_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuario (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+
+    CONSTRAINT uq_credit_card_usuario_alias
+        UNIQUE (usuario_id, alias)
+);
+
+COMMENT ON TABLE credit_card IS 'Tarjetas de crédito del propietario para agregar deudas no ligadas a contratos de arriendo.';
+
+CREATE INDEX idx_credit_card_usuario_id ON credit_card (usuario_id);
+
+CREATE TRIGGER trg_credit_card_updated_at
+    BEFORE UPDATE ON credit_card
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+
+
+-- ---------------------------------------------------------------------------
+-- 3.12 OWNER_DEBT
+-- Deudas del propietario (tarjetas, préstamos externos u otros conceptos).
+-- ---------------------------------------------------------------------------
+CREATE TABLE owner_debt (
+    id                INTEGER            GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    usuario_id        INTEGER            NOT NULL,
+    credit_card_id    INTEGER,
+    tipo              VARCHAR(20)        NOT NULL CHECK (tipo IN ('credit_card', 'loan', 'other')),
+    descripcion       VARCHAR(255)       NOT NULL,
+    monto_total       NUMERIC(12,2)      NOT NULL CHECK (monto_total > 0),
+    saldo_pendiente   NUMERIC(12,2)      NOT NULL CHECK (saldo_pendiente >= 0),
+    fecha_corte       DATE,
+    fecha_vencimiento DATE,
+    estado            owner_debt_estado  NOT NULL DEFAULT 'pendiente',
+    created_at        TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_owner_debt_usuario
+        FOREIGN KEY (usuario_id) REFERENCES usuario (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+
+    CONSTRAINT fk_owner_debt_credit_card
+        FOREIGN KEY (credit_card_id) REFERENCES credit_card (id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
+
+    CONSTRAINT chk_owner_debt_saldo
+        CHECK (saldo_pendiente <= monto_total)
+);
+
+COMMENT ON TABLE owner_debt IS 'Deudas de nivel propietario visibles en dashboard y módulo de créditos.';
+COMMENT ON COLUMN owner_debt.tipo IS 'Tipo de deuda: credit_card, loan u other.';
+
+CREATE INDEX idx_owner_debt_usuario_id ON owner_debt (usuario_id);
+CREATE INDEX idx_owner_debt_estado ON owner_debt (estado);
+CREATE INDEX idx_owner_debt_tipo ON owner_debt (tipo);
+
+CREATE TRIGGER trg_owner_debt_updated_at
+    BEFORE UPDATE ON owner_debt
+    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+
+
+-- ---------------------------------------------------------------------------
+-- 3.13 SERVICIO_CATALOGO
 -- Catálogo maestro de servicios públicos/domiciliarios disponibles.
 -- ---------------------------------------------------------------------------
 CREATE TABLE servicio_catalogo (
@@ -525,7 +613,7 @@ CREATE TRIGGER trg_servicio_catalogo_updated_at
 
 
 -- ---------------------------------------------------------------------------
--- 3.12 CASA_SERVICIO
+-- 3.14 CASA_SERVICIO
 -- Tabla puente N:M → qué servicios están instalados en cada casa.
 -- ---------------------------------------------------------------------------
 CREATE TABLE casa_servicio (
@@ -552,7 +640,7 @@ CREATE INDEX idx_casa_servicio_servicio_id ON casa_servicio (servicio_id);
 
 
 -- ---------------------------------------------------------------------------
--- 3.13 FACTURA_SERVICIO
+-- 3.15 FACTURA_SERVICIO
 -- Factura mensual de un servicio específico que llega a una casa.
 -- ---------------------------------------------------------------------------
 CREATE TABLE factura_servicio (
@@ -596,7 +684,7 @@ CREATE TRIGGER trg_factura_servicio_updated_at
 
 
 -- ---------------------------------------------------------------------------
--- 3.14 CARGO_SERVICIO
+-- 3.16 CARGO_SERVICIO
 -- Porción de una factura asignada a un contrato/inquilino específico.
 -- Permite repartir una factura compartida entre varios arrendatarios.
 -- ---------------------------------------------------------------------------
@@ -634,7 +722,7 @@ CREATE TRIGGER trg_cargo_servicio_updated_at
 
 
 -- ---------------------------------------------------------------------------
--- 3.15 MANTENIMIENTO
+-- 3.17 MANTENIMIENTO
 -- Registro de trabajos de mantenimiento/reparación en una zona habitacional,
 -- supervisados por un usuario del sistema.
 -- ---------------------------------------------------------------------------
