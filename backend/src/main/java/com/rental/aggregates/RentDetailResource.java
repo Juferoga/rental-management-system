@@ -3,12 +3,16 @@ package com.rental.aggregates;
 import com.rental.dto.RentListDTO;
 import com.rental.dto.RentCalendarDetailDTO;
 import io.quarkus.hibernate.orm.panache.Panache;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -21,8 +25,11 @@ import java.util.List;
 
 @Path("/api/v1/arriendos")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Arriendos Aggregate", description = "Endpoints agregados para detalle de arriendos")
 public class RentDetailResource {
+
+    private static final List<String> PAYMENT_TYPES = List.of("NEQUI", "DAVIPLATA", "EFECTIVO");
 
     @GET
     @Path("/list")
@@ -65,6 +72,14 @@ public class RentDetailResource {
             @QueryParam("year") Integer year,
             @QueryParam("month") Integer month
     ) {
+        int resolvedYear = year != null ? year : LocalDate.now().getYear();
+        int resolvedMonth = month != null ? month : LocalDate.now().getMonthValue();
+        Integer resolvedZoneId = resolveZoneId(zoneId);
+
+        if (resolvedZoneId == null) {
+            return emptyDetail(zoneId, resolvedYear, resolvedMonth);
+        }
+
         List<Object[]> baseRows = Panache.getEntityManager().createNativeQuery("""
                 SELECT z.id, z.nombre,
                        CONCAT(i.nombre, ' ', i.apellido) AS tenant_name,
@@ -73,18 +88,16 @@ public class RentDetailResource {
                 LEFT JOIN contrato c ON c.zona_habitacional_id = z.id AND c.estado = 'activo'
                 LEFT JOIN inquilino i ON i.id = c.inquilino_id
                 WHERE z.id = :zoneId
-                """).setParameter("zoneId", zoneId).getResultList();
+                """).setParameter("zoneId", resolvedZoneId).getResultList();
 
         if (baseRows.isEmpty()) {
-            throw new NotFoundException("Zona no encontrada");
+            return emptyDetail(resolvedZoneId, resolvedYear, resolvedMonth);
         }
 
         Object[] base = baseRows.get(0);
-        int resolvedYear = year != null ? year : LocalDate.now().getYear();
-        int resolvedMonth = month != null ? month : LocalDate.now().getMonthValue();
 
         RentCalendarDetailDTO dto = new RentCalendarDetailDTO();
-        dto.zoneId = zoneId;
+        dto.zoneId = resolvedZoneId;
         dto.zoneName = value(base[1], "Zona");
         dto.tenantName = value(base[2], "Sin inquilino");
         dto.rentValue = toBigDecimal(base[3]);
@@ -101,7 +114,7 @@ public class RentDetailResource {
                 ORDER BY pr.id DESC
                 LIMIT 1
                 """)
-                .setParameter("zoneId", zoneId)
+                .setParameter("zoneId", resolvedZoneId)
                 .setParameter("year", (short) resolvedYear)
                 .setParameter("month", (short) resolvedMonth)
                 .getResultList();
@@ -117,7 +130,7 @@ public class RentDetailResource {
                 WHERE c.zona_habitacional_id = :zoneId
                 ORDER BY pr.anio DESC, pr.mes DESC
                 LIMIT 24
-                """).setParameter("zoneId", zoneId).getResultList();
+                """).setParameter("zoneId", resolvedZoneId).getResultList();
 
         for (Object[] row : monthRows) {
             String periodStatus = value(row[2], "sin_registro");
@@ -129,6 +142,157 @@ public class RentDetailResource {
             ));
         }
 
+        List<Object[]> paymentRows = Panache.getEntityManager().createNativeQuery("""
+                SELECT pr.id,
+                       pr.estado,
+                       pr.tipo_pago,
+                       pr.monto_esperado,
+                       pr.monto_pagado,
+                       pr.fecha_pago
+                FROM pago_renta pr
+                JOIN contrato c ON c.id = pr.contrato_id
+                WHERE c.zona_habitacional_id = :zoneId
+                  AND pr.anio = :year
+                  AND pr.mes = :month
+                ORDER BY pr.id DESC
+                """)
+                .setParameter("zoneId", resolvedZoneId)
+                .setParameter("year", (short) resolvedYear)
+                .setParameter("month", (short) resolvedMonth)
+                .getResultList();
+
+        for (Object[] row : paymentRows) {
+            dto.payments.add(new RentCalendarDetailDTO.PaymentDetailDTO(
+                    ((Number) row[0]).intValue(),
+                    value(row[1], "PENDIENTE"),
+                    value(row[2], ""),
+                    toBigDecimal(row[3]),
+                    toBigDecimal(row[4]),
+                    toLocalDate(row[5])
+            ));
+        }
+
+        return dto;
+    }
+
+    @PATCH
+    @Path("/pagos/{paymentId}")
+    @Transactional
+    @Operation(summary = "Actualizar pago de renta del detalle", description = "Actualiza estado y tipo de pago de un pago de renta existente.")
+    public Response updatePayment(
+            @PathParam("paymentId") Integer paymentId,
+            RentPaymentUpdateRequest request
+    ) {
+        if (paymentId == null || paymentId <= 0) {
+            throw new WebApplicationException("El paymentId es inválido.", Response.Status.BAD_REQUEST);
+        }
+
+        if (request == null) {
+            throw new WebApplicationException("El cuerpo de la solicitud es obligatorio.", Response.Status.BAD_REQUEST);
+        }
+
+        String estado = normalizeOptional(request.estado);
+        String tipoPago = normalizeOptional(request.tipoPago);
+
+        if (estado != null) {
+            estado = estado.toUpperCase();
+        }
+
+        if (estado == null && tipoPago == null) {
+            throw new WebApplicationException("Debes enviar al menos estado o tipoPago.", Response.Status.BAD_REQUEST);
+        }
+
+        if (tipoPago != null) {
+            tipoPago = tipoPago.toUpperCase();
+            if (!PAYMENT_TYPES.contains(tipoPago)) {
+                throw new WebApplicationException("tipoPago no válido. Valores permitidos: NEQUI, DAVIPLATA, EFECTIVO.", Response.Status.BAD_REQUEST);
+            }
+        }
+
+        var updated = Panache.getEntityManager().createNativeQuery("""
+                UPDATE pago_renta pr
+                SET estado = COALESCE(:estado, pr.estado),
+                    tipo_pago = COALESCE(:tipoPago, pr.tipo_pago)
+                WHERE pr.id = :id
+                RETURNING pr.id,
+                          pr.estado,
+                          pr.tipo_pago,
+                          pr.monto_esperado,
+                          pr.monto_pagado,
+                          pr.fecha_pago
+                """)
+                .setParameter("id", paymentId)
+                .setParameter("estado", estado)
+                .setParameter("tipoPago", tipoPago)
+                .getResultList();
+
+        if (updated.isEmpty()) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        Object[] row = (Object[]) updated.get(0);
+        return Response.ok(new RentCalendarDetailDTO.PaymentDetailDTO(
+                ((Number) row[0]).intValue(),
+                value(row[1], "PENDIENTE"),
+                value(row[2], ""),
+                toBigDecimal(row[3]),
+                toBigDecimal(row[4]),
+                toLocalDate(row[5])
+        )).build();
+    }
+
+    private Integer resolveZoneId(Integer requestedId) {
+        if (requestedId == null || requestedId <= 0) {
+            return null;
+        }
+
+        List<?> paymentRows = Panache.getEntityManager().createNativeQuery("""
+                SELECT c.zona_habitacional_id
+                FROM pago_renta pr
+                JOIN contrato c ON c.id = pr.contrato_id
+                WHERE pr.id = :requestedId
+                LIMIT 1
+                """).setParameter("requestedId", requestedId).getResultList();
+
+        if (!paymentRows.isEmpty()) {
+            return ((Number) paymentRows.get(0)).intValue();
+        }
+
+        List<?> contractRows = Panache.getEntityManager().createNativeQuery("""
+                SELECT c.zona_habitacional_id
+                FROM contrato c
+                WHERE c.id = :requestedId
+                LIMIT 1
+                """).setParameter("requestedId", requestedId).getResultList();
+
+        if (!contractRows.isEmpty()) {
+            return ((Number) contractRows.get(0)).intValue();
+        }
+
+        List<?> zoneRows = Panache.getEntityManager().createNativeQuery("""
+                SELECT z.id
+                FROM zona_habitacional z
+                WHERE z.id = :requestedId
+                LIMIT 1
+                """).setParameter("requestedId", requestedId).getResultList();
+
+        if (!zoneRows.isEmpty()) {
+            return ((Number) zoneRows.get(0)).intValue();
+        }
+
+        return null;
+    }
+
+    private RentCalendarDetailDTO emptyDetail(Integer requestedId, int year, int month) {
+        RentCalendarDetailDTO dto = new RentCalendarDetailDTO();
+        dto.zoneId = requestedId;
+        dto.zoneName = "Zona";
+        dto.tenantName = "Sin inquilino";
+        dto.rentValue = BigDecimal.ZERO;
+        dto.year = year;
+        dto.month = month;
+        dto.status = "sin_registro";
+        dto.statusIcon = iconForStatus(dto.status);
         return dto;
     }
 
@@ -166,5 +330,18 @@ public class RentDetailResource {
             case "vencido" -> "times";
             default -> "minus";
         };
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    public static class RentPaymentUpdateRequest {
+        public String estado;
+        public String tipoPago;
     }
 }

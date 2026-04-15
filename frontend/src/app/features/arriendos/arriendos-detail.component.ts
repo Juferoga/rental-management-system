@@ -1,10 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { DialogModule } from 'primeng/dialog';
+import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TimelineModule } from 'primeng/timeline';
-import { RentCalendarDetailDTO } from '../../models/rental.models';
+import { PaymentType, RentCalendarDetailDTO, RentPaymentDetailDTO } from '../../models/rental.models';
 import { RentalApiService } from '../../services/rental-api.service';
 
 type RentDetail = RentCalendarDetailDTO;
@@ -16,10 +21,25 @@ interface TimelinePeriod {
   statusIcon: string;
 }
 
+interface SelectOption<T = string> {
+  label: string;
+  value: T;
+}
+
 @Component({
   selector: 'app-arriendos-detail',
   standalone: true,
-  imports: [CommonModule, TimelineModule, CardModule, TagModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TimelineModule,
+    CardModule,
+    TagModule,
+    TableModule,
+    ButtonModule,
+    DialogModule,
+    SelectModule,
+  ],
   template: `
     @if (notFound()) {
       <p-card styleClass="empty-state-card">
@@ -114,6 +134,52 @@ interface TimelinePeriod {
                   </div>
                 </article>
               </div>
+
+              <div class="payments-section">
+                <div class="payments-header">
+                  <h4>Pagos del periodo</h4>
+                </div>
+
+                <p-table
+                  [value]="model.payments ?? []"
+                  [tableStyle]="{ 'min-width': '100%' }"
+                  size="small"
+                >
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>ID</th>
+                      <th>Monto esperado</th>
+                      <th>Monto pagado</th>
+                      <th>Estado</th>
+                      <th>Tipo de Pago</th>
+                      <th>Fecha pago</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </ng-template>
+
+                  <ng-template pTemplate="body" let-payment>
+                    <tr>
+                      <td>{{ payment.id }}</td>
+                      <td>{{ payment.montoEsperado | number:'1.0-0' }}</td>
+                      <td>{{ payment.montoPagado | number:'1.0-0' }}</td>
+                      <td>
+                        <p-tag [value]="payment.estado" [severity]="getPaymentStatusSeverity(payment.estado)"></p-tag>
+                      </td>
+                      <td>{{ payment.tipoPago || '-' }}</td>
+                      <td>{{ payment.fechaPago ? (payment.fechaPago | date:'yyyy-MM-dd') : '-' }}</td>
+                      <td>
+                        <p-button
+                          label="Editar"
+                          icon="pi pi-pencil"
+                          size="small"
+                          [text]="true"
+                          (onClick)="openEditDialog(payment)"
+                        ></p-button>
+                      </td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
             </p-card>
           } @else {
             <p-card styleClass="detail-card detail-card--placeholder">
@@ -123,6 +189,53 @@ interface TimelinePeriod {
           }
         </section>
       </div>
+
+      <p-dialog
+        header="Editar pago"
+        [(visible)]="editDialogVisible"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [style]="{ width: '30rem' }"
+      >
+        <div class="edit-grid">
+          <label for="estadoEdit">Estado</label>
+          <p-select
+            inputId="estadoEdit"
+            [options]="paymentStatusOptions"
+            [(ngModel)]="editForm.estado"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+          ></p-select>
+
+          <label for="tipoPagoEdit">Tipo de pago</label>
+          <p-select
+            inputId="tipoPagoEdit"
+            [options]="paymentTypeOptions"
+            [(ngModel)]="editForm.tipoPago"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+          ></p-select>
+        </div>
+
+        @if (editErrorMessage()) {
+          <small class="edit-error">{{ editErrorMessage() }}</small>
+        }
+
+        <ng-template pTemplate="footer">
+          <button
+            pButton
+            type="button"
+            label="Cancelar"
+            severity="secondary"
+            [outlined]="true"
+            (click)="closeEditDialog()"
+          ></button>
+          <button pButton type="button" label="Guardar" [loading]="savingEdit()" (click)="savePaymentEdit()"></button>
+        </ng-template>
+      </p-dialog>
     }
   `,
   styles: [
@@ -241,6 +354,25 @@ interface TimelinePeriod {
         color: #16a34a;
       }
 
+      .payments-section {
+        margin-top: 1rem;
+      }
+
+      .payments-header h4 {
+        margin: 0 0 0.6rem;
+      }
+
+      .edit-grid {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .edit-error {
+        display: block;
+        margin-top: 0.6rem;
+        color: #dc2626;
+      }
+
       .empty-title {
         margin: 0;
       }
@@ -268,6 +400,28 @@ export class ArriendosDetailComponent {
   readonly selectedPeriod = signal<{ year: number; month: number } | null>(null);
   readonly activeDetail = signal<RentDetail | null>(null);
   readonly notFound = signal(false);
+  readonly savingEdit = signal(false);
+  readonly editErrorMessage = signal('');
+
+  editDialogVisible = false;
+  editingPaymentId: number | null = null;
+  editForm: { estado: string; tipoPago: PaymentType } = {
+    estado: 'PENDIENTE',
+    tipoPago: 'NEQUI',
+  };
+
+  readonly paymentTypeOptions: SelectOption<PaymentType>[] = [
+    { label: 'NEQUI', value: 'NEQUI' },
+    { label: 'DAVIPLATA', value: 'DAVIPLATA' },
+    { label: 'EFECTIVO', value: 'EFECTIVO' },
+  ];
+
+  readonly paymentStatusOptions: SelectOption<string>[] = [
+    { label: 'PENDIENTE', value: 'PENDIENTE' },
+    { label: 'PARCIAL', value: 'PARCIAL' },
+    { label: 'PAGADO', value: 'PAGADO' },
+    { label: 'VENCIDO', value: 'VENCIDO' },
+  ];
 
   private readonly rentId = Number(this.route.snapshot.paramMap.get('id'));
   private readonly detailCache = new Map<string, RentDetail>();
@@ -299,6 +453,61 @@ export class ArriendosDetailComponent {
     }
 
     this.loadDetail(this.rentId, period.year, period.month);
+  }
+
+  openEditDialog(payment: RentPaymentDetailDTO) {
+    this.editingPaymentId = payment.id;
+    this.editForm = {
+      estado: (payment.estado ?? 'PENDIENTE').toUpperCase(),
+      tipoPago: this.normalizePaymentType(payment.tipoPago),
+    };
+    this.editErrorMessage.set('');
+    this.editDialogVisible = true;
+  }
+
+  closeEditDialog() {
+    this.editDialogVisible = false;
+    this.editingPaymentId = null;
+    this.editErrorMessage.set('');
+    this.savingEdit.set(false);
+  }
+
+  savePaymentEdit() {
+    if (!this.editingPaymentId) {
+      return;
+    }
+
+    this.savingEdit.set(true);
+    this.editErrorMessage.set('');
+
+    this.api
+      .updateRentPayment(this.editingPaymentId, {
+        estado: this.editForm.estado,
+        tipoPago: this.editForm.tipoPago,
+      })
+      .subscribe({
+        next: (updatedPayment) => {
+          const current = this.activeDetail();
+          if (!current) {
+            this.closeEditDialog();
+            return;
+          }
+
+          const updatedPayments = (current.payments ?? []).map((item) =>
+            item.id === updatedPayment.id ? { ...item, ...updatedPayment } : item,
+          );
+          const updatedDetail: RentDetail = { ...current, payments: updatedPayments };
+
+          const key = this.getCacheKey(updatedDetail.year, updatedDetail.month);
+          this.detailCache.set(key, updatedDetail);
+          this.activeDetail.set(updatedDetail);
+          this.closeEditDialog();
+        },
+        error: () => {
+          this.savingEdit.set(false);
+          this.editErrorMessage.set('No pudimos actualizar el pago. Intentá nuevamente.');
+        },
+      });
   }
 
   isSelected(period: { year: number; month: number }) {
@@ -371,5 +580,30 @@ export class ArriendosDetailComponent {
       times: 'danger',
       minus: 'secondary',
     }[icon] as 'success' | 'warn' | 'danger' | 'secondary' ?? 'secondary';
+  }
+
+  getPaymentStatusSeverity(status: string): 'success' | 'warn' | 'danger' | 'secondary' {
+    const normalized = (status ?? '').trim().toUpperCase();
+    if (normalized === 'PAGADO') {
+      return 'success';
+    }
+    if (normalized === 'PARCIAL' || normalized === 'PENDIENTE') {
+      return 'warn';
+    }
+    if (normalized === 'VENCIDO') {
+      return 'danger';
+    }
+    return 'secondary';
+  }
+
+  private normalizePaymentType(raw: string): PaymentType {
+    const normalized = (raw ?? '').trim().toUpperCase();
+    if (normalized === 'DAVIPLATA') {
+      return 'DAVIPLATA';
+    }
+    if (normalized === 'EFECTIVO') {
+      return 'EFECTIVO';
+    }
+    return 'NEQUI';
   }
 }

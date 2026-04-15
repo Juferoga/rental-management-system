@@ -118,7 +118,7 @@ export function deudaDtoToPayload(dto: DeudaDTO): PrestamoPayload {
     saldoPendiente: dto.saldoPendiente,
     motivo: dto.motivo,
     estado: dto.estado,
-    contrato: { id: dto.contratoId },
+    contrato: null,
   };
 }
 

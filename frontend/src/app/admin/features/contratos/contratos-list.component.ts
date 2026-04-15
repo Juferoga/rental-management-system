@@ -144,6 +144,6 @@ export class ContratosListComponent implements OnInit {
       return `Inquilino #${inquilinoId}`;
     }
 
-    return `${inquilino.nombres} ${inquilino.apellidos}`;
+    return `${inquilino.nombre} ${inquilino.apellido}`;
   }
 }

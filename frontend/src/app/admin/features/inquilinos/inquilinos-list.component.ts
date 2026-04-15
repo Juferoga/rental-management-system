@@ -48,9 +48,9 @@ import { InquilinosStore } from './inquilinos.store';
 
       <ng-template #bodyTemplate let-inquilino>
         <tr>
-          <td>{{ inquilino.nombres }} {{ inquilino.apellidos }}</td>
+          <td>{{ inquilino.nombre }} {{ inquilino.apellido }}</td>
           <td>{{ inquilino.telefono }}</td>
-          <td>{{ inquilino.email }}</td>
+          <td>{{ inquilino.correo }}</td>
           <td>{{ inquilino.direccion || '—' }}</td>
           <td>
             <div class="admin-row-actions">
@@ -115,7 +115,7 @@ export class InquilinosListComponent implements OnInit {
 
     this.adminConfirmService.confirm({
       title: 'Eliminar inquilino',
-      message: `¿Querés eliminar a "${inquilino.nombres} ${inquilino.apellidos}"?`,
+      message: `¿Querés eliminar a "${inquilino.nombre} ${inquilino.apellido}"?`,
       accept: () => {
         this.store.deleteInquilino(inquilinoId, {
           onError: () => {

@@ -1,6 +1,6 @@
 package com.rental.aggregates;
 
-import com.rental.dto.GlobalSearchResult;
+import com.rental.dto.SearchResultDTO;
 import io.quarkus.hibernate.orm.panache.Panache;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -19,15 +19,39 @@ import java.util.List;
 public class SearchResource {
 
     @GET
-    @Operation(summary = "Buscar datos globales", description = "Retorna resultados de zonas, arriendos, servicios y deudas.")
-    public List<GlobalSearchResult> search(@QueryParam("q") String query) {
+    @Operation(summary = "Buscar datos globales", description = "Retorna resultados de inquilinos, zonas y deudas.")
+    public List<SearchResultDTO> search(@QueryParam("q") String query) {
         String q = query == null ? "" : query.trim().toLowerCase();
         if (q.isEmpty()) {
             return List.of();
         }
 
         String like = "%" + q + "%";
-        List<GlobalSearchResult> results = new ArrayList<>();
+        List<SearchResultDTO> results = new ArrayList<>();
+
+        List<Object[]> tenants = Panache.getEntityManager().createNativeQuery("""
+                SELECT i.id,
+                       TRIM(CONCAT(COALESCE(i.nombre, ''), ' ', COALESCE(i.apellido, ''))) AS full_name,
+                       COALESCE(i.correo, '') AS correo
+                FROM inquilino i
+                WHERE LOWER(COALESCE(i.nombre, '')) LIKE :like
+                   OR LOWER(COALESCE(i.apellido, '')) LIKE :like
+                   OR LOWER(TRIM(CONCAT(COALESCE(i.nombre, ''), ' ', COALESCE(i.apellido, '')))) LIKE :like
+                ORDER BY full_name
+                LIMIT 10
+                """).setParameter("like", like).getResultList();
+
+        for (Object[] row : tenants) {
+            Integer id = (Integer) row[0];
+            String fullName = String.valueOf(row[1]);
+            String correo = String.valueOf(row[2]);
+            results.add(new SearchResultDTO(
+                    "Inquilino",
+                    fullName,
+                    correo,
+                    "/admin/inquilinos/" + id + "/editar"
+            ));
+        }
 
         List<Object[]> zones = Panache.getEntityManager().createNativeQuery("""
                 SELECT z.id, z.nombre
@@ -38,39 +62,36 @@ public class SearchResource {
                 """).setParameter("like", like).getResultList();
 
         for (Object[] row : zones) {
-            String id = String.valueOf(row[0]);
-            String label = "Zona: " + row[1];
-            results.add(new GlobalSearchResult(id, "ZONE", label, "/arriendos/" + id));
-            results.add(new GlobalSearchResult(id, "SERVICE", "Servicios: " + row[1], "/servicios/" + id));
-        }
-
-        List<Object[]> rents = Panache.getEntityManager().createNativeQuery("""
-                SELECT z.id,
-                       CONCAT(i.nombre, ' ', i.apellido) AS tenant_name
-                FROM contrato c
-                JOIN zona_habitacional z ON z.id = c.zona_habitacional_id
-                JOIN inquilino i ON i.id = c.inquilino_id
-                WHERE LOWER(CONCAT(i.nombre, ' ', i.apellido)) LIKE :like
-                ORDER BY tenant_name
-                LIMIT 10
-                """).setParameter("like", like).getResultList();
-
-        for (Object[] row : rents) {
-            String id = String.valueOf(row[0]);
-            results.add(new GlobalSearchResult(id, "RENT", "Arriendo: " + row[1], "/arriendos/" + id));
+            Integer id = (Integer) row[0];
+            String nombre = String.valueOf(row[1]);
+            results.add(new SearchResultDTO(
+                    "Zona",
+                    nombre,
+                    "Zona habitacional",
+                    "/admin/zonas/" + id + "/editar"
+            ));
         }
 
         List<Object[]> debts = Panache.getEntityManager().createNativeQuery("""
-                SELECT od.id, od.descripcion
-                FROM owner_debt od
-                WHERE LOWER(od.descripcion) LIKE :like
-                ORDER BY od.id DESC
+                SELECT p.id,
+                       COALESCE(NULLIF(p.motivo, ''), CONCAT('Deuda #', p.id)) AS motivo,
+                       COALESCE(CAST(p.estado AS TEXT), 'Sin estado') AS estado
+                FROM prestamo p
+                WHERE LOWER(COALESCE(p.motivo, '')) LIKE :like
+                ORDER BY p.id DESC
                 LIMIT 10
                 """).setParameter("like", like).getResultList();
 
         for (Object[] row : debts) {
-            String id = String.valueOf(row[0]);
-            results.add(new GlobalSearchResult(id, "DEBT", "Deuda: " + row[1], "/creditos/" + id));
+            Integer id = (Integer) row[0];
+            String motivo = String.valueOf(row[1]);
+            String estado = String.valueOf(row[2]);
+            results.add(new SearchResultDTO(
+                    "Deuda",
+                    motivo,
+                    "Estado: " + estado,
+                    "/admin/deudas/" + id + "/editar"
+            ));
         }
 
         return results;

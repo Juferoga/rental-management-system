@@ -5,7 +5,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
 import { AdminApiError, AdminFieldError } from '../../../models/admin.models';
 import { AdminToolbarComponent } from '../../shared/components/admin-toolbar.component';
 import { DeudasStore } from './deudas.store';
@@ -17,7 +16,6 @@ import { DeudasStore } from './deudas.store';
     CommonModule,
     ReactiveFormsModule,
     ButtonModule,
-    SelectModule,
     InputNumberModule,
     InputTextModule,
     AdminToolbarComponent,
@@ -52,27 +50,6 @@ import { DeudasStore } from './deudas.store';
       <form class="admin-form-card" [formGroup]="form" (ngSubmit)="save()" novalidate>
         <div class="admin-form-grid">
           <div class="admin-field admin-field--full">
-            <label for="contratoId">Contrato *</label>
-            <p-select
-              inputId="contratoId"
-              formControlName="contratoId"
-              [options]="contratoOptions()"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Seleccioná un contrato"
-              [filter]="true"
-              filterBy="label"
-              appendTo="body"
-            />
-            @if (showError('contratoId', 'required') || showError('contratoId', 'min')) {
-              <small class="admin-field-error">Seleccioná un contrato válido.</small>
-            }
-            @if (showError('contratoId', 'backend')) {
-              <small class="admin-field-error">{{ getBackendError('contratoId') }}</small>
-            }
-          </div>
-
-          <div class="admin-field">
             <label for="fecha">Fecha *</label>
             <input id="fecha" type="date" class="p-inputtext p-component" formControlName="fecha" />
             @if (showError('fecha', 'required')) {
@@ -187,19 +164,11 @@ export class DeudaFormComponent implements OnInit {
   readonly title = computed(() => (this.isEditMode() ? 'Editar deuda' : 'Nueva deuda'));
   readonly subtitle = computed(() =>
     this.isEditMode()
-      ? 'Actualizá contrato, montos y estado de la deuda.'
+      ? 'Actualizá montos y estado de la deuda.'
       : 'Completá los campos para registrar un nuevo préstamo/deuda.',
   );
 
-  readonly contratoOptions = computed(() =>
-    this.store.contratos().map((contrato) => ({
-      value: contrato.id!,
-      label: `#${contrato.id} · ${contrato.fechaInicio} → ${contrato.fechaFin}`,
-    })),
-  );
-
   readonly form = this.fb.nonNullable.group({
-    contratoId: [0, [Validators.required, Validators.min(1)]],
     fecha: ['', [Validators.required]],
     montoTotal: [0, [Validators.required, Validators.min(0.01)]],
     saldoPendiente: [0, [Validators.required, Validators.min(0)]],
@@ -208,8 +177,6 @@ export class DeudaFormComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.store.loadCatalogs();
-
     const idParam = this.route.snapshot.paramMap.get('id');
     if (!idParam) {
       return;
@@ -225,7 +192,6 @@ export class DeudaFormComponent implements OnInit {
     this.store.loadDeudaById(id, {
       onSuccess: (deuda) => {
         this.form.patchValue({
-          contratoId: deuda.contratoId,
           fecha: deuda.fecha,
           montoTotal: deuda.montoTotal,
           saldoPendiente: deuda.saldoPendiente,
@@ -249,7 +215,6 @@ export class DeudaFormComponent implements OnInit {
     }
 
     const payload = {
-      contratoId: this.form.controls.contratoId.value,
       fecha: this.form.controls.fecha.value,
       montoTotal: Number(this.form.controls.montoTotal.value),
       saldoPendiente: Number(this.form.controls.saldoPendiente.value),
@@ -324,11 +289,6 @@ export class DeudaFormComponent implements OnInit {
     const field = fieldError.field?.toLowerCase();
     const message = fieldError.message ?? 'Dato inválido';
 
-    if (field === 'contrato' || field === 'contratoid') {
-      this.addBackendError('contratoId', message);
-      return;
-    }
-
     if (field === 'fecha') {
       this.addBackendError('fecha', message);
       return;
@@ -360,7 +320,6 @@ export class DeudaFormComponent implements OnInit {
   }
 
   private clearBackendErrors() {
-    this.removeErrorKey('contratoId', 'backend');
     this.removeErrorKey('fecha', 'backend');
     this.removeErrorKey('montoTotal', 'backend');
     this.removeErrorKey('saldoPendiente', 'backend');
@@ -382,4 +341,4 @@ export class DeudaFormComponent implements OnInit {
   }
 }
 
-type FormControlName = 'contratoId' | 'fecha' | 'montoTotal' | 'saldoPendiente' | 'motivo' | 'estado';
+type FormControlName = 'fecha' | 'montoTotal' | 'saldoPendiente' | 'motivo' | 'estado';

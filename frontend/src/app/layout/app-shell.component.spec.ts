@@ -9,7 +9,7 @@ import { AppShellComponent } from './app-shell.component';
 
 describe('AppShellComponent', () => {
   const apiMock = {
-    search: jasmine.createSpy('search').and.returnValue(of([])),
+    globalSearch: jasmine.createSpy('globalSearch').and.returnValue(of([])),
   } as unknown as RentalApiService;
 
   beforeEach(async () => {
@@ -29,45 +29,37 @@ describe('AppShellComponent', () => {
     expect(element.textContent).toContain('Panel Admin');
   });
 
-  it('should call search API on complete method', () => {
+  it('should call global search API on complete method', () => {
     const fixture = TestBed.createComponent(AppShellComponent);
     const component = fixture.componentInstance;
     component.onSearch({ query: 'zona' } as any);
-    expect((apiMock.search as jasmine.Spy)).toHaveBeenCalledWith('zona');
+    expect((apiMock.globalSearch as jasmine.Spy)).toHaveBeenCalledWith('zona');
   });
 
-  it('should open search dialog with CTRL+K', () => {
+  it('should render topbar autocomplete for global search', () => {
     const fixture = TestBed.createComponent(AppShellComponent);
-    const component = fixture.componentInstance;
-
-    component.onWindowKeydown(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
-
-    expect(component.searchDialogVisible).toBeTrue();
-  });
-
-  it('should configure no-match message for global search', () => {
-    const fixture = TestBed.createComponent(AppShellComponent);
-    const component = fixture.componentInstance;
     fixture.detectChanges();
 
     const autoCompleteDe = fixture.debugElement.query(By.directive(AutoComplete));
-    expect(autoCompleteDe.componentInstance.emptyMessage).toBe(component.noSearchResultsMessage);
-    expect(component.noSearchResultsMessage).toBe('No se encontraron resultados para tu búsqueda.');
+    expect(autoCompleteDe).toBeTruthy();
+    expect(autoCompleteDe.componentInstance.field).toBe('title');
   });
 
-  it('should navigate when selecting a search result', () => {
+  it('should navigate when selecting a global search result', () => {
     const fixture = TestBed.createComponent(AppShellComponent);
     const component = fixture.componentInstance;
     const router = TestBed.inject(Router);
     spyOn(router, 'navigateByUrl');
 
-    component.onSelect({
-      id: '1',
-      type: 'ZONE',
-      label: 'Zona: A-101',
-      route: '/arriendos/1',
+    component.onResultSelect({
+      value: {
+        type: 'Zona',
+        title: 'A-101',
+        subtitle: 'Zona habitacional',
+        url: '/admin/zonas/1/editar',
+      },
     });
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/arriendos/1');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/admin/zonas/1/editar');
   });
 });

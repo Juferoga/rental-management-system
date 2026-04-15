@@ -135,7 +135,11 @@ export class DeudasListComponent implements OnInit {
     });
   }
 
-  resolveContratoLabel(contratoId: number): string {
+  resolveContratoLabel(contratoId: number | null | undefined): string {
+    if (!contratoId) {
+      return 'Deuda Personal';
+    }
+
     const contrato = this.store.contratos().find((item: ContratoDTO) => item.id === contratoId);
     if (!contrato) {
       return `Contrato #${contratoId}`;

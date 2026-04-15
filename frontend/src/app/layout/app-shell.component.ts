@@ -1,10 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet } from '@angular/router';
 import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
 import { MenubarModule } from 'primeng/menubar';
 import { MenuItem } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -20,8 +18,6 @@ import { RentalApiService } from '../services/rental-api.service';
     RouterOutlet,
     MenubarModule,
     AutoCompleteModule,
-    DialogModule,
-    ButtonModule,
     FormsModule,
     ToastModule,
     ConfirmDialogModule,
@@ -32,59 +28,26 @@ import { RentalApiService } from '../services/rental-api.service';
         <div class="shell-nav-wrapper">
           <h2 class="shell-title">Rental Management</h2>
           <p-menubar [model]="menuItems()"></p-menubar>
-        </div>
-        <div class="shell-actions">
-          <button
-            type="button"
-            pButton
-            class="p-button-outlined search-trigger"
-            icon="pi pi-search"
-            label="Buscar"
-            (click)="openSearchDialog()"
-          ></button>
-          <span class="search-shortcut">CTRL+K</span>
+          <p-autoComplete
+            [(ngModel)]="searchQuery"
+            [suggestions]="searchResults"
+            (completeMethod)="onSearch($event)"
+            (onSelect)="onResultSelect($event)"
+            field="title"
+            [dropdown]="true"
+            placeholder="Buscar inquilinos, zonas o deudas"
+            styleClass="topbar-search"
+          >
+            <ng-template let-result pTemplate="item">
+              <div><b>{{ result.type }}:</b> {{ result.title }} <small>{{ result.subtitle }}</small></div>
+            </ng-template>
+          </p-autoComplete>
         </div>
       </header>
 
       <main class="workspace">
         <router-outlet></router-outlet>
       </main>
-
-      <p-dialog
-        header="Búsqueda global"
-        [modal]="true"
-        [draggable]="false"
-        [resizable]="false"
-        [dismissableMask]="true"
-        appendTo="body"
-        [(visible)]="searchDialogVisible"
-        styleClass="search-dialog"
-        [style]="{ width: 'min(760px, 95vw)' }"
-      >
-        <div class="search-dialog-body">
-          <p-autoComplete
-            [(ngModel)]="selectedSearch"
-            [suggestions]="suggestions()"
-            [dropdown]="true"
-            [forceSelection]="true"
-            [emptyMessage]="noSearchResultsMessage"
-            field="label"
-            placeholder="Buscar arriendos, servicios o deudas"
-            (completeMethod)="onSearch($event)"
-            (onSelect)="onSelect($event.value)"
-            styleClass="search-input"
-          ></p-autoComplete>
-
-          <button
-            type="button"
-            pButton
-            label="Buscar"
-            icon="pi pi-arrow-right"
-            (click)="onSearchGo()"
-            [disabled]="!selectedSearch"
-          ></button>
-        </div>
-      </p-dialog>
 
       <p-toast position="top-right"></p-toast>
       <p-confirmdialog />
@@ -100,6 +63,8 @@ import { RentalApiService } from '../services/rental-api.service';
       }
 
       .shell-topbar {
+        position: relative;
+        z-index: 1200;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -123,30 +88,13 @@ import { RentalApiService } from '../services/rental-api.service';
         white-space: nowrap;
       }
 
-      .shell-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+      .topbar-search {
+        width: min(460px, 42vw);
       }
 
       .workspace {
         min-height: 0;
         padding: 1rem;
-      }
-
-      .search-dialog-body {
-        display: flex;
-        gap: 0.75rem;
-        align-items: center;
-      }
-
-      .search-input {
-        flex: 1;
-      }
-
-      .search-shortcut {
-        color: var(--text-color-secondary, #64748b);
-        font-size: 0.85rem;
       }
 
       @media (max-width: 768px) {
@@ -160,9 +108,6 @@ import { RentalApiService } from '../services/rental-api.service';
           align-items: stretch;
         }
 
-        .shell-actions {
-          justify-content: flex-end;
-        }
       }
     `,
   ],
@@ -171,10 +116,8 @@ export class AppShellComponent {
   private readonly router = inject(Router);
   private readonly api = inject(RentalApiService);
 
-  readonly suggestions = signal<GlobalSearchResult[]>([]);
-  readonly noSearchResultsMessage = 'No se encontraron resultados para tu búsqueda.';
-  selectedSearch: GlobalSearchResult | null = null;
-  searchDialogVisible = false;
+  searchQuery = '';
+  searchResults: GlobalSearchResult[] = [];
 
   readonly menuItems = signal<MenuItem[]>([
     {
@@ -198,6 +141,11 @@ export class AppShellComponent {
       routerLink: '/admin/deudas',
     },
     {
+      label: 'Reportes',
+      icon: 'pi pi-chart-line',
+      routerLink: '/reportes',
+    },
+    {
       label: 'Gestión',
       icon: 'pi pi-cog',
       items: [
@@ -210,39 +158,20 @@ export class AppShellComponent {
     },
   ]);
 
-  @HostListener('window:keydown', ['$event'])
-  onWindowKeydown(event: KeyboardEvent) {
-    if (event.ctrlKey && event.key.toLowerCase() === 'k') {
-      event.preventDefault();
-      this.openSearchDialog();
-    }
-  }
-
-  openSearchDialog() {
-    this.searchDialogVisible = true;
-  }
-
   onSearch(event: AutoCompleteCompleteEvent) {
     const query = (event.query ?? '').trim();
     if (!query) {
-      this.suggestions.set([]);
+      this.searchResults = [];
       return;
     }
-    this.api.search(query).subscribe((items) => this.suggestions.set(items));
+    this.api.globalSearch(query).subscribe((items) => (this.searchResults = items));
   }
 
-  onSelect(result: GlobalSearchResult) {
-    if (!result?.route) {
+  onResultSelect(event: { value?: GlobalSearchResult }) {
+    const result = event.value;
+    if (!result?.url) {
       return;
     }
-    this.searchDialogVisible = false;
-    this.router.navigateByUrl(result.route);
-  }
-
-  onSearchGo() {
-    if (!this.selectedSearch) {
-      return;
-    }
-    this.onSelect(this.selectedSearch);
+    this.router.navigateByUrl(result.url);
   }
 }

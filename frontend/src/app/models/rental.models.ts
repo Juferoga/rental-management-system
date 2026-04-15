@@ -1,8 +1,8 @@
 export interface GlobalSearchResult {
-  id: string;
-  type: 'ZONE' | 'RENT' | 'SERVICE' | 'DEBT';
-  label: string;
-  route: string;
+  type: string;
+  title: string;
+  subtitle: string;
+  url: string;
 }
 
 export interface MenuTreeZoneDTO {
@@ -62,6 +62,28 @@ export interface DashboardAlertsDTO {
     paid?: number;
     pending?: number;
   };
+}
+
+export interface ReportsSummaryDTO {
+  occupancyRates: {
+    month: number;
+    occupiedZones: number;
+    totalZones: number;
+    occupancyRate: number;
+  }[];
+  incomeVsExpenses: {
+    month: number;
+    income: number;
+    expenses: number;
+  }[];
+  debtStatus: {
+    settled: number;
+    pending: number;
+    overdue: number;
+    total: number;
+    collectionRate: number;
+  };
+  generatedAt: string;
 }
 
 export interface CalendarEventDTO {
@@ -128,6 +150,18 @@ export interface RentCalendarDetailDTO {
     status: string;
     statusIcon: string;
   }[];
+  payments?: RentPaymentDetailDTO[];
+}
+
+export type PaymentType = 'NEQUI' | 'DAVIPLATA' | 'EFECTIVO';
+
+export interface RentPaymentDetailDTO {
+  id: number;
+  estado: string;
+  tipoPago: PaymentType | string;
+  montoEsperado: number;
+  montoPagado: number;
+  fechaPago: string | null;
 }
 
 export interface ServiceDetailDTO {

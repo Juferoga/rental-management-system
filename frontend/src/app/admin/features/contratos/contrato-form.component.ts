@@ -176,7 +176,7 @@ export class ContratoFormComponent implements OnInit {
   readonly inquilinoOptions = computed(() =>
     this.store
       .inquilinos()
-      .map((inquilino) => ({ value: inquilino.id!, label: `${inquilino.nombres} ${inquilino.apellidos}` })),
+      .map((inquilino) => ({ value: inquilino.id!, label: `${inquilino.nombre} ${inquilino.apellido}` })),
   );
 
   readonly form = this.fb.nonNullable.group({

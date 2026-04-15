@@ -15,5 +15,6 @@ public class PagoRenta extends PanacheEntityBase {
     @Column(name = "monto_pagado") public BigDecimal montoPagado;
     @Column(name = "fecha_pago") public LocalDate fechaPago;
     @Column(name = "metodo_pago") public String metodoPago;
+    @Column(name = "tipo_pago") public String tipoPago;
     public String estado;
 }

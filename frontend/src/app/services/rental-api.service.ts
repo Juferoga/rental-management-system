@@ -7,6 +7,9 @@ import {
   GlobalSearchResult,
   MenuTreeDTO,
   OwnerDebtDetailDTO,
+  PaymentType,
+  RentPaymentDetailDTO,
+  ReportsSummaryDTO,
   RentListDTO,
   RentCalendarDetailDTO,
   ServiceListDTO,
@@ -23,7 +26,12 @@ export class RentalApiService {
     return this.http.get<DashboardAlertsDTO>(`${this.api}/dashboard/alerts`);
   }
 
-  search(q: string) {
+  getReportsSummary(year?: number) {
+    const params = typeof year === 'number' ? { year } : undefined;
+    return this.http.get<ReportsSummaryDTO>(`${this.api}/reportes/summary`, { params });
+  }
+
+  globalSearch(q: string) {
     return this.http.get<GlobalSearchResult[]>(`${this.api}/search`, {
       params: { q },
     });
@@ -45,6 +53,10 @@ export class RentalApiService {
 
   getRentList() {
     return this.http.get<RentListDTO[]>(`${this.api}/arriendos/list`);
+  }
+
+  updateRentPayment(paymentId: number, payload: { estado: string; tipoPago: PaymentType }) {
+    return this.http.patch<RentPaymentDetailDTO>(`${this.api}/arriendos/pagos/${paymentId}`, payload);
   }
 
   getServiceDetail(zoneId: number, year: number, month: number) {

@@ -62,6 +62,7 @@ public class PagoRentaResource {
         existente.montoPagado = pagoActualizado.montoPagado;
         existente.fechaPago = pagoActualizado.fechaPago;
         existente.metodoPago = pagoActualizado.metodoPago;
+        existente.tipoPago = pagoActualizado.tipoPago;
         existente.estado = pagoActualizado.estado;
         return Response.ok(existente).build();
     }
@@ -84,6 +85,7 @@ public class PagoRentaResource {
         if (datosNuevos.montoPagado != null) existente.montoPagado = datosNuevos.montoPagado;
         if (datosNuevos.fechaPago != null) existente.fechaPago = datosNuevos.fechaPago;
         if (datosNuevos.metodoPago != null) existente.metodoPago = datosNuevos.metodoPago;
+        if (datosNuevos.tipoPago != null) existente.tipoPago = datosNuevos.tipoPago;
         if (datosNuevos.estado != null) existente.estado = datosNuevos.estado;
         return Response.ok(existente).build();
     }

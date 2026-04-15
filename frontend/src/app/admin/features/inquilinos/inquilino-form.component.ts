@@ -42,30 +42,30 @@ import { InquilinosStore } from './inquilinos.store';
       <form class="admin-form-card" [formGroup]="form" (ngSubmit)="save()" novalidate>
         <div class="admin-form-grid">
           <div class="admin-field">
-            <label for="nombres">Nombres *</label>
-            <input id="nombres" type="text" pInputText formControlName="nombres" placeholder="Ej: Juan Carlos" />
-            @if (showError('nombres', 'required')) {
-              <small class="admin-field-error">Los nombres son obligatorios.</small>
+            <label for="nombre">Nombre *</label>
+            <input id="nombre" type="text" pInputText formControlName="nombre" placeholder="Ej: Juan Carlos" />
+            @if (showError('nombre', 'required')) {
+              <small class="admin-field-error">El nombre es obligatorio.</small>
             }
-            @if (showError('nombres', 'maxlength')) {
-              <small class="admin-field-error">Los nombres deben tener como máximo 120 caracteres.</small>
+            @if (showError('nombre', 'maxlength')) {
+              <small class="admin-field-error">El nombre debe tener como máximo 120 caracteres.</small>
             }
-            @if (showError('nombres', 'backend')) {
-              <small class="admin-field-error">{{ getBackendError('nombres') }}</small>
+            @if (showError('nombre', 'backend')) {
+              <small class="admin-field-error">{{ getBackendError('nombre') }}</small>
             }
           </div>
 
           <div class="admin-field">
-            <label for="apellidos">Apellidos *</label>
-            <input id="apellidos" type="text" pInputText formControlName="apellidos" placeholder="Ej: Pérez" />
-            @if (showError('apellidos', 'required')) {
-              <small class="admin-field-error">Los apellidos son obligatorios.</small>
+            <label for="apellido">Apellido *</label>
+            <input id="apellido" type="text" pInputText formControlName="apellido" placeholder="Ej: Pérez" />
+            @if (showError('apellido', 'required')) {
+              <small class="admin-field-error">El apellido es obligatorio.</small>
             }
-            @if (showError('apellidos', 'maxlength')) {
-              <small class="admin-field-error">Los apellidos deben tener como máximo 120 caracteres.</small>
+            @if (showError('apellido', 'maxlength')) {
+              <small class="admin-field-error">El apellido debe tener como máximo 120 caracteres.</small>
             }
-            @if (showError('apellidos', 'backend')) {
-              <small class="admin-field-error">{{ getBackendError('apellidos') }}</small>
+            @if (showError('apellido', 'backend')) {
+              <small class="admin-field-error">{{ getBackendError('apellido') }}</small>
             }
           </div>
 
@@ -84,16 +84,16 @@ import { InquilinosStore } from './inquilinos.store';
           </div>
 
           <div class="admin-field">
-            <label for="email">Email *</label>
-            <input id="email" type="email" pInputText formControlName="email" placeholder="Ej: juan@email.com" />
-            @if (showError('email', 'required')) {
-              <small class="admin-field-error">El email es obligatorio.</small>
+            <label for="correo">Correo *</label>
+            <input id="correo" type="email" pInputText formControlName="correo" placeholder="Ej: juan@email.com" />
+            @if (showError('correo', 'required')) {
+              <small class="admin-field-error">El correo es obligatorio.</small>
             }
-            @if (showError('email', 'email')) {
-              <small class="admin-field-error">Ingresá un email válido.</small>
+            @if (showError('correo', 'email')) {
+              <small class="admin-field-error">Ingresá un correo válido.</small>
             }
-            @if (showError('email', 'backend')) {
-              <small class="admin-field-error">{{ getBackendError('email') }}</small>
+            @if (showError('correo', 'backend')) {
+              <small class="admin-field-error">{{ getBackendError('correo') }}</small>
             }
           </div>
 
@@ -148,10 +148,10 @@ export class InquilinoFormComponent implements OnInit {
   );
 
   readonly form = this.fb.nonNullable.group({
-    nombres: ['', [Validators.required, Validators.maxLength(120)]],
-    apellidos: ['', [Validators.required, Validators.maxLength(120)]],
+    nombre: ['', [Validators.required, Validators.maxLength(120)]],
+    apellido: ['', [Validators.required, Validators.maxLength(120)]],
     telefono: ['', [Validators.required, Validators.maxLength(40)]],
-    email: ['', [Validators.required, Validators.email]],
+    correo: ['', [Validators.required, Validators.email]],
     direccion: ['', [Validators.maxLength(255)]],
   });
 
@@ -171,10 +171,10 @@ export class InquilinoFormComponent implements OnInit {
     this.store.loadInquilinoById(id, {
       onSuccess: (inquilino) => {
         this.form.patchValue({
-          nombres: inquilino.nombres,
-          apellidos: inquilino.apellidos,
+          nombre: inquilino.nombre,
+          apellido: inquilino.apellido,
           telefono: inquilino.telefono,
-          email: inquilino.email,
+          correo: inquilino.correo,
           direccion: inquilino.direccion ?? '',
         });
       },
@@ -193,10 +193,10 @@ export class InquilinoFormComponent implements OnInit {
     }
 
     const payload = {
-      nombres: this.form.controls.nombres.value.trim(),
-      apellidos: this.form.controls.apellidos.value.trim(),
+      nombre: this.form.controls.nombre.value.trim(),
+      apellido: this.form.controls.apellido.value.trim(),
       telefono: this.form.controls.telefono.value.trim(),
-      email: this.form.controls.email.value.trim(),
+      correo: this.form.controls.correo.value.trim(),
       direccion: this.form.controls.direccion.value.trim() || null,
     };
 
@@ -249,13 +249,13 @@ export class InquilinoFormComponent implements OnInit {
     const field = fieldError.field?.toLowerCase();
     const message = fieldError.message ?? 'Dato inválido';
 
-    if (field === 'nombres') {
-      this.addBackendError('nombres', message);
+    if (field === 'nombre' || field === 'nombres') {
+      this.addBackendError('nombre', message);
       return;
     }
 
-    if (field === 'apellidos') {
-      this.addBackendError('apellidos', message);
+    if (field === 'apellido' || field === 'apellidos') {
+      this.addBackendError('apellido', message);
       return;
     }
 
@@ -264,8 +264,8 @@ export class InquilinoFormComponent implements OnInit {
       return;
     }
 
-    if (field === 'email') {
-      this.addBackendError('email', message);
+    if (field === 'correo' || field === 'email') {
+      this.addBackendError('correo', message);
       return;
     }
 
@@ -280,10 +280,10 @@ export class InquilinoFormComponent implements OnInit {
   }
 
   private clearBackendErrors() {
-    this.removeErrorKey('nombres', 'backend');
-    this.removeErrorKey('apellidos', 'backend');
+    this.removeErrorKey('nombre', 'backend');
+    this.removeErrorKey('apellido', 'backend');
     this.removeErrorKey('telefono', 'backend');
-    this.removeErrorKey('email', 'backend');
+    this.removeErrorKey('correo', 'backend');
     this.removeErrorKey('direccion', 'backend');
   }
 
@@ -301,4 +301,4 @@ export class InquilinoFormComponent implements OnInit {
   }
 }
 
-type FormControlName = 'nombres' | 'apellidos' | 'telefono' | 'email' | 'direccion';
+type FormControlName = 'nombre' | 'apellido' | 'telefono' | 'correo' | 'direccion';

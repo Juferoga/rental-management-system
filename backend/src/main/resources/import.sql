@@ -18,12 +18,12 @@ INSERT INTO contrato (id, inquilino_id, zona_habitacional_id, fecha_firma, fecha
 VALUES (1, 1, 1, DATE '2026-01-05', DATE '2026-02-01', DATE '2027-01-31', 1200000.00, 'activo')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO pago_renta (id, contrato_id, anio, mes, monto_esperado, monto_pagado, fecha_pago, metodo_pago, estado)
+INSERT INTO pago_renta (id, contrato_id, anio, mes, monto_esperado, monto_pagado, fecha_pago, metodo_pago, tipo_pago, estado)
 VALUES
-    (1, 1, 2026, 2, 1200000.00, 1200000.00, DATE '2026-02-05', 'TRANSFERENCIA_BANCARIA', 'PAGADO'),
-    (2, 1, 2026, 3, 1200000.00, 600000.00, DATE '2026-03-10', 'TRANSFERENCIA_BANCARIA', 'PARCIAL'),
-    (3, 1, 2026, 4, 1200000.00, 0.00, NULL, NULL, 'PENDIENTE'),
-    (4, 1, 2026, 1, 1200000.00, 0.00, NULL, NULL, 'VENCIDO')
+    (1, 1, 2026, 2, 1200000.00, 1200000.00, DATE '2026-02-05', 'TRANSFERENCIA_BANCARIA', 'NEQUI', 'PAGADO'),
+    (2, 1, 2026, 3, 1200000.00, 600000.00, DATE '2026-03-10', 'TRANSFERENCIA_BANCARIA', 'DAVIPLATA', 'PARCIAL'),
+    (3, 1, 2026, 4, 1200000.00, 0.00, NULL, NULL, 'EFECTIVO', 'PENDIENTE'),
+    (4, 1, 2026, 1, 1200000.00, 0.00, NULL, NULL, NULL, 'VENCIDO')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO prestamo (id, contrato_id, fecha, monto_total, saldo_pendiente, motivo, estado)

@@ -4,6 +4,7 @@ import io.quarkus.hibernate.orm.panache.Panache;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @ApplicationScoped
@@ -18,7 +19,7 @@ public class DashboardQueryService {
                        p.fecha
                 FROM prestamo p
                 WHERE p.estado IS NOT NULL
-                  AND LOWER(CAST(p.estado AS TEXT)) IN ('pendiente', 'vencido', 'vencida', 'parcial')
+                  AND LOWER(CAST(p.estado AS TEXT)) IN ('activo', 'vencido')
                   AND COALESCE(p.saldo_pendiente, 0) > 0
                 ORDER BY p.fecha NULLS LAST, p.id DESC
                 LIMIT 20
@@ -63,18 +64,18 @@ public class DashboardQueryService {
                     WHERE fs.anio = EXTRACT(YEAR FROM CURRENT_DATE)
                       AND fs.mes = EXTRACT(MONTH FROM CURRENT_DATE)
                 ),
-                owner_debt_totals AS (
+                prestamo_totals AS (
                     SELECT
-                        COALESCE(SUM(CASE WHEN od.estado = 'pagada' THEN od.monto_total ELSE 0 END), 0) AS paid,
-                        COALESCE(SUM(CASE WHEN od.estado IN ('pendiente', 'vencida') THEN od.saldo_pendiente ELSE 0 END), 0) AS unpaid
-                    FROM owner_debt od
-                    WHERE EXTRACT(YEAR FROM COALESCE(od.fecha_vencimiento, CURRENT_DATE)) = EXTRACT(YEAR FROM CURRENT_DATE)
-                      AND EXTRACT(MONTH FROM COALESCE(od.fecha_vencimiento, CURRENT_DATE)) = EXTRACT(MONTH FROM CURRENT_DATE)
+                        COALESCE(SUM(p.monto_total - p.saldo_pendiente), 0) AS paid,
+                        COALESCE(SUM(p.saldo_pendiente), 0) AS unpaid
+                    FROM prestamo p
+                    WHERE EXTRACT(YEAR FROM p.fecha) = EXTRACT(YEAR FROM CURRENT_DATE)
+                      AND EXTRACT(MONTH FROM p.fecha) = EXTRACT(MONTH FROM CURRENT_DATE)
                 )
                 SELECT
-                    (st.paid + odt.paid) AS paid,
-                    (st.unpaid + odt.unpaid) AS unpaid
-                FROM service_totals st, owner_debt_totals odt
+                    (st.paid + pt.paid) AS paid,
+                    (st.unpaid + pt.unpaid) AS unpaid
+                FROM service_totals st, prestamo_totals pt
                 """).getResultList();
         return rows.isEmpty() ? new Object[]{BigDecimal.ZERO, BigDecimal.ZERO} : rows.get(0);
     }
@@ -90,5 +91,124 @@ public class DashboardQueryService {
                   AND fs.mes = EXTRACT(MONTH FROM CURRENT_DATE)
                 """).getResultList();
         return rows.isEmpty() ? new Object[]{BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO} : rows.get(0);
+    }
+
+    public List<Object[]> loadMonthlyOccupancyRates(int year) {
+        return Panache.getEntityManager().createNativeQuery("""
+                WITH months AS (
+                    SELECT generate_series(1, 12) AS month
+                ),
+                zones AS (
+                    SELECT id
+                    FROM zona_habitacional
+                ),
+                occupied AS (
+                    SELECT
+                        m.month,
+                        COUNT(DISTINCT c.zona_habitacional_id) AS occupied_zones
+                    FROM months m
+                    JOIN contrato c ON c.estado IN ('activo', 'en_mora')
+                        AND c.fecha_inicio <= (make_date(CAST(:year AS int), m.month::int, 1) + INTERVAL '1 month' - INTERVAL '1 day')
+                        AND (c.fecha_fin IS NULL OR c.fecha_fin >= make_date(CAST(:year AS int), m.month::int, 1))
+                    GROUP BY m.month
+                )
+                SELECT
+                    m.month,
+                    COALESCE(o.occupied_zones, 0) AS occupied_zones,
+                    (SELECT COUNT(*) FROM zones) AS total_zones
+                FROM months m
+                LEFT JOIN occupied o ON o.month = m.month
+                ORDER BY m.month
+                """)
+                .setParameter("year", year)
+                .getResultList();
+    }
+
+    public List<Object[]> loadIncomeVsExpensesByMonth(int year) {
+        return Panache.getEntityManager().createNativeQuery("""
+                WITH months AS (
+                    SELECT generate_series(1, 12) AS month
+                ),
+                income AS (
+                    SELECT pr.mes::int AS month, COALESCE(SUM(pr.monto_pagado), 0) AS total
+                    FROM pago_renta pr
+                    WHERE pr.anio = :year
+                    GROUP BY pr.mes
+                ),
+                expenses AS (
+                    SELECT fs.mes::int AS month, COALESCE(SUM(fs.valor_total), 0) AS total
+                    FROM factura_servicio fs
+                    WHERE fs.anio = :year
+                      AND fs.estado <> 'anulada'
+                    GROUP BY fs.mes
+                )
+                SELECT
+                    m.month,
+                    COALESCE(i.total, 0) AS income,
+                    COALESCE(e.total, 0) AS expenses
+                FROM months m
+                LEFT JOIN income i ON i.month = m.month
+                LEFT JOIN expenses e ON e.month = m.month
+                ORDER BY m.month
+                """)
+                .setParameter("year", year)
+                .getResultList();
+    }
+
+    public Object[] loadDebtStatusSummary() {
+        List<Object[]> rows = Panache.getEntityManager().createNativeQuery("""
+                WITH rent_debts AS (
+                    SELECT
+                        COALESCE(SUM(pr.monto_pagado), 0) AS settled,
+                        COALESCE(SUM(CASE WHEN pr.estado IN ('pendiente', 'parcial') THEN GREATEST(pr.monto_esperado - pr.monto_pagado, 0) ELSE 0 END), 0) AS pending,
+                        COALESCE(SUM(CASE WHEN pr.estado = 'vencido' THEN GREATEST(pr.monto_esperado - pr.monto_pagado, 0) ELSE 0 END), 0) AS overdue
+                    FROM pago_renta pr
+                ),
+                service_debts AS (
+                    SELECT
+                        COALESCE(SUM(CASE WHEN fs.estado = 'pagada' THEN fs.valor_total ELSE 0 END), 0) AS settled,
+                        COALESCE(SUM(CASE WHEN fs.estado = 'pendiente' THEN fs.valor_total ELSE 0 END), 0) AS pending,
+                        COALESCE(SUM(CASE WHEN fs.estado = 'vencida' THEN fs.valor_total ELSE 0 END), 0) AS overdue
+                    FROM factura_servicio fs
+                    WHERE fs.estado <> 'anulada'
+                ),
+                loan_debts AS (
+                    SELECT
+                        COALESCE(SUM(p.monto_total - p.saldo_pendiente), 0) AS settled,
+                        COALESCE(SUM(CASE WHEN p.estado = 'activo' THEN p.saldo_pendiente ELSE 0 END), 0) AS pending,
+                        COALESCE(SUM(CASE WHEN p.estado = 'vencido' THEN p.saldo_pendiente ELSE 0 END), 0) AS overdue
+                    FROM prestamo p
+                )
+                SELECT
+                    (rd.settled + sd.settled + ld.settled) AS settled,
+                    (rd.pending + sd.pending + ld.pending) AS pending,
+                    (rd.overdue + sd.overdue + ld.overdue) AS overdue
+                FROM rent_debts rd, service_debts sd, loan_debts ld
+                """).getResultList();
+
+        if (rows.isEmpty()) {
+            return new Object[]{BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO};
+        }
+
+        Object[] row = rows.get(0);
+        BigDecimal settled = toBigDecimal(row[0]);
+        BigDecimal pending = toBigDecimal(row[1]);
+        BigDecimal overdue = toBigDecimal(row[2]);
+        BigDecimal total = settled.add(pending).add(overdue);
+        BigDecimal rate = total.compareTo(BigDecimal.ZERO) > 0
+                ? settled.multiply(BigDecimal.valueOf(100)).divide(total, 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        return new Object[]{settled, pending, overdue, total, rate};
+    }
+
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        }
+        return new BigDecimal(value.toString());
     }
 }

@@ -41,6 +41,7 @@ public class PrestamoResource {
     @Operation(summary = "Crear nuevo", description = "Crea un nuevo registro de Prestamo.")
     @APIResponse(responseCode = "201", description = "Creado exitosamente")
     public Response crear(Prestamo entidad) {
+        sanitizeContrato(entidad);
         entidad.persist();
         Prestamo.getEntityManager().flush();
         Prestamo.getEntityManager().refresh(entidad);
@@ -58,6 +59,7 @@ public class PrestamoResource {
         if (existente == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
+        sanitizeContrato(prestamoActualizado);
         existente.contrato = prestamoActualizado.contrato;
         existente.fecha = prestamoActualizado.fecha;
         existente.montoTotal = prestamoActualizado.montoTotal;
@@ -78,13 +80,25 @@ public class PrestamoResource {
         if (existente == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        if (datosNuevos.contrato != null) existente.contrato = datosNuevos.contrato;
+        if (datosNuevos.contrato == null || datosNuevos.contrato.id == null || datosNuevos.contrato.id <= 0) {
+            existente.contrato = null;
+        } else {
+            existente.contrato = datosNuevos.contrato;
+        }
         if (datosNuevos.fecha != null) existente.fecha = datosNuevos.fecha;
         if (datosNuevos.montoTotal != null) existente.montoTotal = datosNuevos.montoTotal;
         if (datosNuevos.saldoPendiente != null) existente.saldoPendiente = datosNuevos.saldoPendiente;
         if (datosNuevos.motivo != null) existente.motivo = datosNuevos.motivo;
         if (datosNuevos.estado != null) existente.estado = datosNuevos.estado;
         return Response.ok(existente).build();
+    }
+
+    private void sanitizeContrato(Prestamo entidad) {
+        if (entidad == null || entidad.contrato == null || entidad.contrato.id == null || entidad.contrato.id <= 0) {
+            if (entidad != null) {
+                entidad.contrato = null;
+            }
+        }
     }
 
     @DELETE

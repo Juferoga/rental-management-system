@@ -221,7 +221,7 @@ VALUES
 ON CONFLICT (factura_id, contrato_id) DO NOTHING;
 
 -- Pagos de renta (mes actual + mes anterior)
-INSERT INTO pago_renta (contrato_id, anio, mes, monto_esperado, monto_pagado, fecha_pago, metodo_pago, estado)
+INSERT INTO pago_renta (contrato_id, anio, mes, monto_esperado, monto_pagado, fecha_pago, metodo_pago, tipo_pago, estado)
 SELECT
     c.id,
     EXTRACT(YEAR FROM CURRENT_DATE)::smallint,
@@ -244,6 +244,12 @@ SELECT
         ELSE 'transferencia_bancaria'::metodo_pago
     END,
     CASE z.nombre
+        WHEN 'Habitación 101' THEN 'NEQUI'
+        WHEN 'Apartaestudio 102' THEN 'DAVIPLATA'
+        WHEN 'Habitación 201' THEN 'EFECTIVO'
+        ELSE 'NEQUI'
+    END,
+    CASE z.nombre
         WHEN 'Habitación 101' THEN 'pagado'::pago_renta_estado
         WHEN 'Apartaestudio 102' THEN 'parcial'::pago_renta_estado
         WHEN 'Habitación 201' THEN 'pendiente'::pago_renta_estado
@@ -254,7 +260,7 @@ JOIN zona_habitacional z ON z.id = c.zona_habitacional_id
 WHERE c.estado = 'activo'
 ON CONFLICT (contrato_id, anio, mes) DO NOTHING;
 
-INSERT INTO pago_renta (contrato_id, anio, mes, monto_esperado, monto_pagado, fecha_pago, metodo_pago, estado)
+INSERT INTO pago_renta (contrato_id, anio, mes, monto_esperado, monto_pagado, fecha_pago, metodo_pago, tipo_pago, estado)
 SELECT
     c.id,
     EXTRACT(YEAR FROM (CURRENT_DATE - INTERVAL '1 month'))::smallint,
@@ -263,6 +269,7 @@ SELECT
     c.valor_pactado,
     (date_trunc('month', CURRENT_DATE)::date - INTERVAL '5 days')::date,
     'transferencia_bancaria'::metodo_pago,
+    'NEQUI',
     'pagado'::pago_renta_estado
 FROM contrato c
 WHERE c.estado = 'activo'

@@ -9,6 +9,7 @@ import { CreditosListComponent } from './features/creditos/creditos-list.compone
 import { CreditosDetailComponent } from './features/creditos/creditos-detail.component';
 import { CreditosCreateComponent } from './features/creditos/creditos-create.component';
 import { CalendarioComponent } from './features/calendario/calendario.component';
+import { ReportesComponent } from './features/reportes/reportes.component';
 
 export const routes: Routes = [
   {
@@ -24,6 +25,7 @@ export const routes: Routes = [
       { path: 'creditos/nuevo', component: CreditosCreateComponent },
       { path: 'creditos/:id', component: CreditosDetailComponent },
       { path: 'calendario', component: CalendarioComponent },
+      { path: 'reportes', component: ReportesComponent },
       {
         path: 'admin',
         loadChildren: () => import('./admin/admin.routes').then((module) => module.adminRoutes),

@@ -430,6 +430,7 @@ CREATE TABLE pago_renta (
     monto_pagado    NUMERIC(12,2)     NOT NULL DEFAULT 0 CHECK (monto_pagado >= 0),
     fecha_pago      DATE,             -- NULL si aún no se ha pagado
     metodo_pago     metodo_pago,
+    tipo_pago       VARCHAR(20)       CHECK (tipo_pago IN ('NEQUI', 'DAVIPLATA', 'EFECTIVO')),
     estado          pago_renta_estado NOT NULL DEFAULT 'pendiente',
     created_at      TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
@@ -446,6 +447,7 @@ CREATE TABLE pago_renta (
 COMMENT ON TABLE  pago_renta               IS 'Registro del canon mensual por contrato. Se genera uno por mes activo y se va actualizando conforme llegan abonos.';
 COMMENT ON COLUMN pago_renta.monto_pagado  IS 'Puede ser menor al esperado (pago parcial) o igual (pagado completo).';
 COMMENT ON COLUMN pago_renta.fecha_pago    IS 'Fecha del último abono registrado. NULL si no hay ningún pago aún.';
+COMMENT ON COLUMN pago_renta.tipo_pago     IS 'Tipo de billetera/medio de pago simplificado para la vista de detalle (NEQUI, DAVIPLATA, EFECTIVO).';
 
 CREATE INDEX idx_pago_renta_contrato_id ON pago_renta (contrato_id);
 CREATE INDEX idx_pago_renta_estado      ON pago_renta (estado);

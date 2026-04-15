@@ -20,6 +20,16 @@ describe('ArriendosDetailComponent', () => {
           { year: 2026, month: 4, status: 'pagado', statusIcon: 'check' },
           { year: 2026, month: 3, status: 'pendiente', statusIcon: 'warning' },
         ],
+        payments: [
+          {
+            id: 11,
+            estado: 'PAGADO',
+            tipoPago: 'NEQUI',
+            montoEsperado: 1500000,
+            montoPagado: 1500000,
+            fechaPago: '2026-04-10',
+          },
+        ],
       })
     ),
   } as unknown as RentalApiService;

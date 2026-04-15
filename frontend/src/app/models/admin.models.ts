@@ -7,10 +7,10 @@ export interface ZonaDTO {
 
 export interface InquilinoDTO {
   id?: number;
-  nombres: string;
-  apellidos: string;
+  nombre: string;
+  apellido: string;
   telefono: string;
-  email: string;
+  correo: string;
   direccion?: string | null;
 }
 
@@ -49,7 +49,7 @@ export interface PagoRentaDTO {
 
 export interface DeudaDTO {
   id?: number;
-  contratoId: number;
+  contratoId?: number | null;
   fecha: string;
   montoTotal: number;
   saldoPendiente: number;
@@ -99,7 +99,7 @@ export interface PrestamoPayload {
   saldoPendiente: number;
   motivo?: string | null;
   estado?: string | null;
-  contrato: EntityRefPayload;
+  contrato: EntityRefPayload | null;
 }
 
 export interface ContratoApiResponse {
