@@ -1,0 +1,112 @@
+<section class="reportes-page">
+  <p-toolbar styleClass="reportes-toolbar">
+    <div class="p-toolbar-group-start">
+      <div>
+        <h2>Centro de Reportes Financieros</h2>
+        <p class="reportes-subtitle">Panel ejecutivo de ingresos, morosidad y ocupación</p>
+      </div>
+    </div>
+    <div class="p-toolbar-group-end">
+      <p-button
+        icon="pi pi-file-pdf"
+        label="Exportar PDF"
+        severity="danger"
+        class="mr-2"
+        (onClick)="exportPdf()"
+      ></p-button>
+      <p-button
+        icon="pi pi-file-excel"
+        label="Exportar Excel"
+        severity="success"
+        (onClick)="exportExcel()"
+      ></p-button>
+    </div>
+  </p-toolbar>
+
+  <div class="grid reportes-grid">
+    <div class="col-12 lg:col-8">
+      <p-card styleClass="reportes-card">
+        <ng-template pTemplate="header">
+          <div class="reportes-card-header">
+            <div>
+              <h3>Ingresos Mensuales</h3>
+              <p>Comparativo mensual de ingresos y gastos del año</p>
+            </div>
+            <i class="pi pi-wallet reportes-card-icon" aria-hidden="true"></i>
+          </div>
+        </ng-template>
+        <p-chart
+          type="bar"
+          [data]="ingresosMensualesData"
+          [options]="defaultChartOptions"
+          styleClass="reportes-chart"
+        ></p-chart>
+      </p-card>
+    </div>
+
+    <div class="col-12 lg:col-4">
+      <p-card styleClass="reportes-card">
+        <ng-template pTemplate="header">
+          <div class="reportes-card-header">
+            <div>
+              <h3>Estado de Deuda</h3>
+              <p>Distribución entre saldado, pendiente y vencido</p>
+            </div>
+            <i class="pi pi-map-marker reportes-card-icon" aria-hidden="true"></i>
+          </div>
+        </ng-template>
+        <p-chart
+          type="doughnut"
+          [data]="morosidadPorZonaData"
+          [options]="donutChartOptions"
+          styleClass="reportes-chart reportes-chart--small"
+        ></p-chart>
+      </p-card>
+    </div>
+
+    <div class="col-12">
+      <p-card styleClass="reportes-card">
+        <ng-template pTemplate="header">
+          <div class="reportes-card-header">
+            <div>
+              <h3>Ocupación Anual</h3>
+              <p>Evolución del porcentaje de ocupación durante el año</p>
+            </div>
+            <i class="pi pi-chart-line reportes-card-icon" aria-hidden="true"></i>
+          </div>
+        </ng-template>
+        <p-chart
+          type="line"
+          [data]="ocupacionAnualData"
+          [options]="defaultChartOptions"
+          styleClass="reportes-chart"
+        ></p-chart>
+      </p-card>
+    </div>
+
+    <div class="col-12">
+      <p-card styleClass="reportes-card">
+        <div class="reportes-summary">
+          <div class="reportes-kpi">
+            <span>Ingreso promedio mensual</span>
+            <strong>{{ ingresoPromedioMensual() | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
+          </div>
+          <div class="reportes-kpi">
+            <span>Morosidad total</span>
+            <strong>{{ morosidadTotalPorcentaje() | number: '1.0-2' }}%</strong>
+          </div>
+          <div class="reportes-kpi">
+            <span>Ocupación promedio</span>
+            <strong>{{ ocupacionPromedio() | number: '1.0-2' }}%</strong>
+          </div>
+          <div class="reportes-kpi">
+            <span>Proyección Q2</span>
+            <strong>{{ proyeccionQ2() | currency: 'COP' : 'symbol-narrow' : '1.0-0' }}</strong>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
+  <p-toast></p-toast>
+</section>
